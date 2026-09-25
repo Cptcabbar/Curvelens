@@ -114,5 +114,15 @@ def run(path: str | None, log=print) -> int:
     edited_ok = curve.n_points == n0 + 1 and curve.undo() and curve.n_points == n0
     log(f"query: value_at({mid:.4g}) = {ans.value if ans else None}, {len(hits)} X answer(s); edit/undo ok: {edited_ok}")
     ok = ok and ans is not None and len(hits) >= 1 and edited_ok
+    # 7. importing a lookup table and comparing it with the curve --------------------------------------
+    from core.table_import import compare_to_curve, read_table
+
+    with tempfile.TemporaryDirectory() as tmp:
+        csv_path = write_csv(table, Path(tmp) / "reimport.csv")
+        back = read_table(csv_path)
+        xs, ys = back.y_finite(0)
+        cmp = compare_to_curve(xs, ys, curve.data)
+        log(f"table import: {len(back)} rows re-read, {cmp.n_compared} compared with the curve, max |diff| {cmp.max_abs:.4g}")
+        ok = ok and len(back) == len(table) and cmp.n_compared > 5 and cmp.max_abs < 0.01
     log("SELFTEST OK" if ok else "SELFTEST FAILED: unexpected values")
     return 0 if ok else 1

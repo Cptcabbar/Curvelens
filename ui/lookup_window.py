@@ -20,8 +20,8 @@ from PySide6.QtCore import QSize, Qt, QThread, Signal
 from PySide6.QtGui import QAction, QColor, QIcon, QKeySequence, QPixmap
 from PySide6.QtWidgets import (QApplication, QButtonGroup, QCheckBox, QDoubleSpinBox, QFileDialog, QFrame, QHBoxLayout,
                                QHeaderView, QInputDialog, QLabel, QListView, QListWidget, QListWidgetItem, QMainWindow, QMessageBox,
-                               QProgressDialog, QPushButton, QSplitter, QStackedWidget, QTableView, QToolBar,
-                               QVBoxLayout, QWidget)
+                               QProgressDialog, QPushButton, QSplitter, QStackedWidget, QTableView, QTabWidget,
+                               QToolBar, QVBoxLayout, QWidget)
 
 from core import raster_charts as rcm
 from core.calibration_store import CalibrationStore, chart_key, pdf_fingerprint
@@ -31,6 +31,7 @@ from core.imageio import IMAGE_SUFFIXES
 from core.vector_charts import ChartData, CurveResult, analyze_pdf
 from ui import printing
 from ui.calibration_dialog import CalibrationDialog
+from ui.compare_tab import CompareTab
 from ui.image_view import ImageView, Tool, ndarray_to_pixmap
 from ui.query_panel import QueryPanel
 from ui.table_model import ArrayTableModel, fmt
@@ -115,8 +116,14 @@ class LookupWindow(QMainWindow):
         self._loading = False
         self._cal: dict | None = None             # calibration clicks of a picture chart in progress
 
+        self._render_cache: dict[int, RenderedRegion] = {}
         self.stack = QStackedWidget()
-        self.setCentralWidget(self.stack)
+        self.tabs = QTabWidget()
+        self.tabs.addTab(self.stack, "Grafik okuma")
+        self.compare = CompareTab(self)
+        self.tabs.addTab(self.compare, "Tablo karşılaştırma")
+        self.tabs.currentChanged.connect(self._tab_changed)
+        self.setCentralWidget(self.tabs)
         self.stack.addWidget(self._build_welcome())
         self.stack.addWidget(self._build_gallery())
         self.stack.addWidget(self._build_detail())
@@ -130,6 +137,7 @@ class LookupWindow(QMainWindow):
     def _build_actions(self) -> None:
         self.act_open = QAction("PDF / görsel aç…", self, shortcut=QKeySequence.StandardKey.Open, triggered=self.open_pdf_dialog)
         self.act_back = QAction("← Grafikler", self, shortcut="Alt+Left", triggered=self.show_gallery)
+        self.act_import = QAction("Tablo içe aktar…", self, shortcut="Ctrl+I", triggered=self.import_table)
         self.act_quit = QAction("Çıkış", self, shortcut="Ctrl+Q", triggered=self.close)
         self.act_manual = QAction("Görselden elle sayısallaştır (gelişmiş)…", self, triggered=self.open_manual_tool)
         self.act_help = QAction("Kullanım", self, shortcut="F1", triggered=self.show_help)
@@ -143,6 +151,7 @@ class LookupWindow(QMainWindow):
         mb = self.menuBar()
         m = mb.addMenu("&Dosya")
         m.addAction(self.act_open)
+        m.addAction(self.act_import)
         m.addSeparator()
         m.addAction(self.act_quit)
         m = mb.addMenu("&Düzelt")
@@ -163,6 +172,7 @@ class LookupWindow(QMainWindow):
         tb.setIconSize(QSize(16, 16))
         self.addToolBar(tb)
         tb.addAction(self.act_open)
+        tb.addAction(self.act_import)
         tb.addAction(self.act_back)
         self.act_back.setVisible(False)
 
@@ -240,8 +250,11 @@ class LookupWindow(QMainWindow):
         self.view.cancelled.connect(self._cancel_mode)
         self.hint_label = QLabel(PAN_HINT)
         self.hint_label.setStyleSheet("color: gray;")
+        self.points_note = QLabel("")
+        self.points_note.setStyleSheet("color: #2e86c1;")
         ll.addWidget(self.view, 1)
         ll.addWidget(self._build_edit_bar())
+        ll.addWidget(self.points_note)
         ll.addWidget(self.hint_label)
         split.addWidget(left)
 
@@ -285,6 +298,7 @@ class LookupWindow(QMainWindow):
         self.table_model = ArrayTableModel()
         self.table = QTableView()
         self.table.setModel(self.table_model)
+        self.table.selectionModel().selectionChanged.connect(self._table_selection_changed)
         self.table.setAlternatingRowColors(True)
         self.table.verticalHeader().setDefaultSectionSize(22)
         self.table.horizontalHeader().setStretchLastSection(True)
@@ -398,7 +412,7 @@ class LookupWindow(QMainWindow):
     # ================================================================== pages
     def _show_page(self, index: int) -> None:
         self.stack.setCurrentIndex(index)
-        self.act_back.setVisible(index == 2)
+        self.act_back.setVisible(index == 2 and self.tabs.currentIndex() == 0)
         if index != 2:
             self.hover_label.setText("")
 
@@ -460,7 +474,9 @@ class LookupWindow(QMainWindow):
         self._finish_worker()
         self.pdf_path = Path(path)
         self.charts = charts
+        self._render_cache.clear()
         self._chart = self._curve = self._table = None
+        self.compare.document_changed()
         if self._src is not None:
             self._src.close()
             self._src = None
@@ -532,14 +548,7 @@ class LookupWindow(QMainWindow):
         self._cancel_calibration()
         if chart.kind == "raster" and not chart.calibrated and self._restore_calibration(chart):
             return                                    # apply_calibration has shown the chart again, calibrated
-        if chart.kind == "raster":                    # a picture inside the PDF: show its own pixels
-            self._rendered = chart.raster.rendered
-        else:
-            QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
-            try:
-                self._rendered = self._src.render(chart.chart.page_index, chart.chart.region, dpi=DETAIL_DPI)
-            finally:
-                QApplication.restoreOverrideCursor()
+        self._rendered = self.render_for(chart)
         self.view.set_image(self._rendered.image)
         self.view.set_plot_area(chart.raster.plot if chart.kind == "raster" else None)
         self.detail_title.setText(chart.title if chart.from_image else f"{chart.title}  ·  sayfa {chart.chart.page_index + 1}")
@@ -573,6 +582,30 @@ class LookupWindow(QMainWindow):
             self.statusBar().showMessage("Görsel grafik: «Kalibre et» ile X ve Y eksenlerinden ikişer işaret gösterin.")
         else:
             self.statusBar().showMessage("Bir eğri seçin: lookup tablosu yanda oluşur.")
+
+    def render_for(self, chart: ChartData) -> RenderedRegion:
+        """Picture of a chart with its exact page <-> pixel mapping (a picture chart shows its own pixels)."""
+        if chart.kind == "raster":
+            return chart.raster.rendered
+        cached = self._render_cache.get(id(chart))
+        if cached is None:
+            QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+            try:
+                cached = self._src.render(chart.chart.page_index, chart.chart.region, dpi=DETAIL_DPI)
+            finally:
+                QApplication.restoreOverrideCursor()
+            self._render_cache[id(chart)] = cached
+        return cached
+
+    def import_table(self) -> None:
+        """File > Tablo içe aktar: read a lookup table, match it with a chart, show it in the comparison tab."""
+        if self.compare.import_table():
+            self.tabs.setCurrentIndex(1)
+
+    def _tab_changed(self, index: int) -> None:
+        self.act_back.setVisible(index == 0 and self.stack.currentIndex() == 2)
+        if index == 1:
+            self.compare.refresh()                  # picks up corrections made to the matched curve in the other tab
 
     def _curve_selected(self, row: int) -> None:
         if self._loading:
@@ -652,8 +685,33 @@ class LookupWindow(QMainWindow):
             xs, ys = np.asarray(px[0]), np.asarray(px[1])
         order = np.argsort(xs, kind="stable")
         self.view.set_highlight(xs[order], ys[order])
-        self.view.set_curves([(xs, ys, QColor(*cv.color), True)])
         self.view.set_edit_points(xs, ys)
+        self._refresh_points()
+
+    EDIT_TOOLS_SET = (Tool.ADD_POINT, Tool.DELETE_POINT, Tool.ERASE, Tool.MOVE_POINT)
+
+    def _refresh_points(self) -> None:
+        """Dots on the picture = the rows of the lookup table (same count, same values), so a change of the X step
+        changes the dots too.  While a correction tool is active the curve's own points are shown instead (they are
+        what the tools grab)."""
+        cv, table = self._curve, self._table
+        if cv is None or self._rendered is None:
+            self.points_note.setText("")
+            return
+        editing = self.view.tool in self.EDIT_TOOLS_SET
+        if editing or table is None:
+            x, y = cv.data.x, cv.data.y
+            note = f"Düzeltme modu: eğrinin {len(x)} ham noktası gösteriliyor (Esc: tablo noktalarına dön)."
+        else:
+            ok = np.isfinite(table.y)
+            x, y = table.x[ok], table.y[ok]
+            note = f"Grafikte {len(x)} nokta işaretli: lookup tablosunun satırlarıyla aynı (sayı ve değerler)."
+        px = self._data_to_px(x, y, cv)
+        if px is None:
+            return
+        self.view.set_curves([(np.asarray(px[0]), np.asarray(px[1]), QColor(*cv.color), True)])
+        self.points_note.setText(note)
+        self._table_selection_changed()
 
     def _auto_step(self) -> None:
         if self._curve is not None and len(self._curve.data):
@@ -671,7 +729,8 @@ class LookupWindow(QMainWindow):
     def _set_edit_tool(self, tool: Tool, hint: str = "") -> None:
         """Switch the picture's tool; the correction tools have buttons, the others (calibration, adding a curve) pass a ``hint``."""
         self.view.set_tool(tool)
-        self.view.set_edit_mode(tool in (Tool.ADD_POINT, Tool.DELETE_POINT, Tool.ERASE, Tool.MOVE_POINT))
+        self.view.set_edit_mode(tool in self.EDIT_TOOLS_SET)
+        self._refresh_points()
         if tool in self.tool_buttons:
             self.tool_buttons[tool].setChecked(True)
         else:
@@ -1116,6 +1175,20 @@ class LookupWindow(QMainWindow):
                                      + (" · kesikli çizgide boşluklar doğrusal interpolasyonla doldurulur"
                                         if self._curve.style == "dashed" else ""))
         self._set_table_enabled(len(table) > 0)
+        self._refresh_points()
+
+    def _table_selection_changed(self, *_args) -> None:
+        """Rows selected in the lookup table are ringed on the picture (and scrolled into view)."""
+        t, r = self._table, self._rendered
+        pts = []
+        if t is not None and r is not None and self._curve is not None:
+            rows = sorted({i.row() for i in self.table.selectionModel().selectedIndexes()})
+            for row in rows[:300]:
+                if 0 <= row < len(t.x) and np.isfinite(t.y[row]):
+                    px = self._data_to_px(float(t.x[row]), float(t.y[row]), self._curve)
+                    if px is not None:
+                        pts.append((float(px[0]), float(px[1])))
+        self.view.set_row_markers(pts, reveal=bool(pts))
 
     def _set_table_enabled(self, on: bool) -> None:
         for w in (self.csv_btn, self.pdf_btn, self.print_btn, self.step_spin):
@@ -1191,7 +1264,10 @@ class LookupWindow(QMainWindow):
             "    lookup tablosu (X → Y) oluşur; adımı değiştirebilirsiniz.\n"
             "4. Değer sorgula: X yazın, Y'yi; Y yazın, X'i (varsa tüm çözümleri) görün. Grafiğe artı işaretiyle gösterilir.\n"
             "5. Hatalı okuma varsa 'Düzelt' araçları: nokta ekle, sil, kutuyla sil, taşı (Ctrl+Z / Ctrl+Y).\n"
-            "6. CSV, PDF kaydet veya Yazdır ile çıktı alın.\n\n"
+            "6. CSV, PDF kaydet veya Yazdır ile çıktı alın. Grafikteki noktalar tablonun satırlarıdır (X adımı değişince\n"
+            "    grafikteki nokta sayısı ve değerleri de değişir); tabloda bir satır seçince nokta halkalanır.\n"
+            "7. 'Tablo karşılaştırma' sekmesi (Ctrl+I): bir lookup tablosunu (CSV/TXT) içe aktarın; açık bir grafikle eşleştirin\n"
+            "    (noktalar üstüne çizilir, eğriyle farkı ölçülür) ya da eşleştirmezseniz tablodan yeni grafik çizilir.\n\n"
             "Grafik PDF'e resim olarak yapıştırılmışsa ('görsel grafik'): 'Kalibre et' ile X ve Y eksenlerinden ikişer\n"
             "işaret (tick) gösterip değerlerini yazın; eğriler renklerinden otomatik okunur. Eksik eğri için\n"
             "'＋ Eğri ekle' ile eğrinin üstüne tıklayın. Değerler resmin piksel çözünürlüğüyle sınırlıdır.\n"

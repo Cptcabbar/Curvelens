@@ -15,7 +15,11 @@ Python 3.11+, PySide6, NumPy, SciPy, pandas, pypdfium2, OpenCV (resim olarak gö
 3. **Detay**: solda grafik, sağda **eğriler ve anlamları** (legend metni + hangi eksene ait + çizgi türü) ve grafik
    notları. Bir eğri seçince (seçili eğri grafikte sarı ile işaretlenir) altında **lookup tablosu** oluşur.
    Fare grafiğin üstündeyken durum çubuğu X, Y değerini ve seçili eğrinin o X'teki değerini gösterir.
-4. **X adımı**: otomatik yuvarlak bir adım (≈50 satır); değiştirilebilir, `0` = eğrinin kendi noktaları.
+4. **X adımı**: otomatik yuvarlak bir adım (≈50 satır); değiştirilebilir, `0` = eğrinin kendi noktaları. **Grafikteki
+   noktalar lookup tablosunun satırlarıdır**: adımı değiştirince grafikteki nokta sayısı ve değerleri de tabloyla birlikte
+   değişir (grafiğin altında "Grafikte N nokta işaretli" yazar). Tabloda bir satır seçince o nokta grafikte turuncu halkayla
+   gösterilir. Düzelt araçlarından biri seçiliyken (tutup taşınacak noktalar için) eğrinin ham noktaları gösterilir; `Esc` ile
+   tablo noktalarına dönülür.
 5. **Değer sorgula** (tablonun altında): `X = …` yazın, eğrinin Y'sini; `Y = …` yazın, eğrinin X'ini görün (eğri aynı Y'yi
    birkaç kez alıyorsa hepsi listelenir). Ondalık için virgül ya da nokta. Karşılık, grafikte artı işaretiyle gösterilir;
    `±` değer, noktaların belirsizliğinden ve eğimden hesaplanır. Eğrinin X/Y aralığı dışında değer üretilmez.
@@ -28,6 +32,23 @@ Python 3.11+, PySide6, NumPy, SciPy, pandas, pypdfium2, OpenCV (resim olarak gö
 Değerler arasında doğrusal interpolasyon yapılır (kesikli çizgilerde dash boşlukları dahil); eğrinin X aralığı
 dışında değer üretilmez. Belirsizlik, PDF'in kendi koordinat çözünürlüğüdür (bu datasheet'te ±0,06 pt →
 ≈ ±1,2 mAh, ±0,0026 V) ve tablo başlığında yazılır.
+
+### Tablo karşılaştırma sekmesi (lookup tablosunu içe aktarma)
+
+Üstteki **Tablo karşılaştırma** sekmesi (ya da `Dosya → Tablo içe aktar…`, `Ctrl+I`) bir lookup tablosunu içe aktarıp
+noktalarını grafik üzerinde gözlemlemek içindir. Tablo CSV/TXT/TSV olabilir: bu programın CSV çıktısı, Excel'den
+kaydedilmiş `;`/tab ayraçlı dosyalar, ondalık virgül ya da nokta, başlıklı ya da başlıksız, birden çok Y sütunu.
+
+1. **Tabloyu seçince eşleştirme istenir:** açık PDF/görselden hangi grafik ve hangi eğriyle eşleşeceğini seçersiniz. Tablonun
+   noktaları o grafiğin üstüne (magenta noktalar) çizilir ve eğriyle karşılaştırılır: kaç nokta eğrinin X aralığında,
+   tablo − eğri farkı (ortalama, ortalama mutlak, RMS, en büyük ve bağıl %), eğrinin belirsizliği; sağdaki tabloda her satır için
+   eğri değeri, fark ve fark %. Birim uyuşmazlığı (ör. mAh ↔ Ah) uyarı olarak yazılır.
+2. **Eşleştirme vermezseniz** ("Eşleştirme yapma" seçeneği) ya da açık grafik yoksa tablodan **yeni bir grafik** çizilir
+   (eksenler, ızgara, çizgi, noktalar; birden çok Y sütunu varsa hepsi, legend'lı). Bir satırı seçince o nokta halkayla gösterilir.
+3. Grafikte tablodaki **tüm satırlar** işaretlidir (grafik alanı dışında kalanlar sayılıp yazılır). Çok sütunlu tabloda
+   "Y sütunu" ile karşılaştırılacak sütun seçilir. **Eşleştir…** eşleşmeyi değiştirir; eşleşen eğri "Grafik okuma"
+   sekmesinde düzeltilirse karşılaştırma sekmeye dönünce yenilenir. **Grafiği PNG kaydet…** ve **Karşılaştırmayı CSV kaydet…**
+   sonucu dışarı verir.
 
 ### Resim olarak gömülü grafikler ve görsel dosyaları (ör. Aspilsan datasheet'i, ekran görüntüsü, tarama)
 
@@ -109,11 +130,14 @@ core/
   curve_edit.py            elle düzeltme: nokta ekle/sil/taşı, geri al/yinele (GUI'siz)
   calibration_store.py     resim grafiklerin kalibrasyonunu PDF içeriğine göre hatırlar (JSON)
   raster_charts.py         PDF'e resim olarak gömülü grafikler: bulma, tick tespiti, kalibrasyon, otomatik eğri okuma
+  table_import.py          lookup tablosu dosyası okuma (CSV/TXT, ayraç/ondalık tahmini) + eğriyle karşılaştırma
   postprocess.py, calibration.py, models.py
   extraction.py, project.py, plotarea.py, export.py, imageio.py    eski görselden sayısallaştırma
 ui/
   lookup_window.py         ana pencere: hoş geldin → galeri → detay (düzeltme araçları, resim grafik kalibrasyonu)
   query_panel.py           "Değer sorgula" kutusu
+  compare_tab.py           "Tablo karşılaştırma" sekmesi: içe aktarma, eşleştirme penceresi, grafik üstünde gözlem
+  plot_canvas.py           tablodan yeni grafik çizimi (eşleştirme yoksa)
   calibration_dialog.py    resim grafikte tıklanan işaretlerin değerleri
   printing.py              tabloyu PDF'e çevirir / yazıcıya gönderir (QTextDocument + QPrinter)
   image_view.py, table_model.py, appicon.py

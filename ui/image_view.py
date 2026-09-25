@@ -122,6 +122,7 @@ class ImageView(QGraphicsView):
         self._move_index: int | None = None
         self._move_ring = None
         self._marker_items: list = []
+        self._row_items: list = []
         self._edit_mode = False
         self.set_tool(Tool.PAN)
 
@@ -133,7 +134,7 @@ class ImageView(QGraphicsView):
         self._area_item = None
         self._rubber = None
         self._highlight_item = None
-        self._move_ring, self._move_index, self._marker_items = None, None, []
+        self._move_ring, self._move_index, self._marker_items, self._row_items = None, None, [], []
         self._edit_xs, self._edit_ys = np.empty(0), np.empty(0)
         if img_bgr is None:
             self._image_rect = QRectF()
@@ -258,6 +259,25 @@ class ImageView(QGraphicsView):
         if self._move_ring is not None:
             self._scene.removeItem(self._move_ring)
             self._move_ring = None
+
+    def set_row_markers(self, points: Sequence[tuple[float, float]], reveal: bool = True) -> None:
+        """Rings around the points of the selected table rows (image pixels); the first one is scrolled into view."""
+        for it in self._row_items:
+            self._scene.removeItem(it)
+        self._row_items = []
+        if not self.has_image():
+            return
+        for x, y in points:
+            ring = self._scene.addEllipse(-9, -9, 18, 18)
+            ring.setPen(self._cosmetic_pen(QColor(255, 140, 0), 2.5))
+            ring.setBrush(QBrush(QColor(255, 140, 0, 70)))
+            ring.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIgnoresTransformations, True)
+            ring.setPos(float(x), float(y))
+            ring.setZValue(26)
+            self._row_items.append(ring)
+        if reveal and points:
+            x, y = points[0]
+            self.ensureVisible(float(x) - 40, float(y) - 40, 80, 80)
 
     def set_markers(self, points: Sequence[tuple[float, float]]) -> None:
         """Crosshairs at ``(x_px, y_px)`` (e.g. the answer of a value query); an empty list clears them."""
