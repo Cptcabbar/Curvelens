@@ -1,6 +1,6 @@
 # Plot Digitizer
 
-PDF'teki grafiklerden **lookup tablosu** üretir. PDF açılınca içindeki tüm grafikler otomatik bulunur; sayfaya çizilmiş
+PDF'teki grafiklerden ve **grafik görsellerinden (PNG, JPG, BMP, TIFF, WebP)** **lookup tablosu** üretir. PDF açılınca içindeki tüm grafikler otomatik bulunur; sayfaya çizilmiş
 (vektör) grafiklerin eğri değerleri PDF'in **vektör verisinden** (piksel ölçümü değil), PDF'e resim olarak yapıştırılmış
 grafiklerin değerleri eksen kalibrasyonuyla resimden okunur. Sonra bir grafik ve bir eğri seçilir; tablo görülür, X ya da
 Y yazılarak karşılığı sorgulanır, hatalı noktalar düzeltilir, CSV/PDF olarak kaydedilir ya da yazdırılır.
@@ -9,7 +9,8 @@ Python 3.11+, PySide6, NumPy, SciPy, pandas, pypdfium2, OpenCV (resim olarak gö
 
 ## Kullanım
 
-1. **PDF aç** (`Ctrl+O` ya da sürükle-bırak). Tüm sayfalardaki grafikler taranır (~1 sn/sayfa).
+1. **PDF ya da görsel aç** (`Ctrl+O` ya da sürükle-bırak). PDF'in tüm sayfalarındaki grafikler taranır (~1 sn/sayfa); bir
+   görsel dosyası tek grafik olarak açılır (aşağıda "Resim olarak gömülü grafikler ve görsel dosyaları").
 2. **Galeri**: her grafik görseli ve adıyla gelir; birine tıklayın.
 3. **Detay**: solda grafik, sağda **eğriler ve anlamları** (legend metni + hangi eksene ait + çizgi türü) ve grafik
    notları. Bir eğri seçince (seçili eğri grafikte sarı ile işaretlenir) altında **lookup tablosu** oluşur.
@@ -28,10 +29,13 @@ Değerler arasında doğrusal interpolasyon yapılır (kesikli çizgilerde dash 
 dışında değer üretilmez. Belirsizlik, PDF'in kendi koordinat çözünürlüğüdür (bu datasheet'te ±0,06 pt →
 ≈ ±1,2 mAh, ±0,0026 V) ve tablo başlığında yazılır.
 
-### Resim olarak gömülü grafikler (ör. Aspilsan datasheet'i)
+### Resim olarak gömülü grafikler ve görsel dosyaları (ör. Aspilsan datasheet'i, ekran görüntüsü, tarama)
 
 Bazı datasheet'lerde grafik çizim değil, PDF'e yapıştırılmış bir resimdir (PNG/JPG). Böyle grafikler de galeride
-görünür ("görsel grafik · kalibrasyon gerekli"; adı resmin üstündeki PDF metninden alınır):
+görünür ("görsel grafik · kalibrasyon gerekli"; adı resmin üstündeki PDF metninden alınır). **PNG, JPG, BMP, TIFF ve WebP
+dosyaları da aynı yoldan** açılır: dosya tek grafik olarak gelir (adı dosya adıdır), çıktılarda sayfa numarası yazmaz.
+Çerçeve otomatik aranır; bulunamazsa (çerçevesiz grafik ya da çok gürültülü resim) **Grafik alanı…** ile eksenlerin oluşturduğu
+dikdörtgeni çizersiniz (bu alan da kalibrasyonla birlikte hatırlanır). Sonrası aşağıdaki adımlarla aynıdır:
 
 1. Grafiği açın, **Kalibre et**'e basın; X ekseninde iki, Y ekseninde iki işarete (tick) tıklayın. Tıklama yakındaki tick
    çizgisine ya da ızgaraya yapışır; grafik çerçevesinin kenarları da önerilir. Sağda ikinci bir Y ekseni varsa "evet"
@@ -52,6 +56,8 @@ görünür ("görsel grafik · kalibrasyon gerekli"; adı resmin üstündeki PDF
    ortam değişkeniyle başka klasöre alınabilir; silmek her şeyi unutturur). Vektör grafikler kalibrasyon gerektirmez.
 
 Doğruluk resmin piksel çözünürlüğüyle sınırlıdır (tablo altında ± olarak yazar; Aspilsan grafiklerinde ≈ ±2 mAh, ±0,004 V).
+JPEG sıkıştırması çizgi kenarlarını bulanıklaştırır ama beş eğrilik deneme grafiğinde (600 DPI PNG) bir pikselin altında
+kalır: PDF'in vektör değerlerine göre ortalama sapma +0,003 V, en büyük 0,0044 V.
 Şarj grafiğinde datasheet'in kendi değerleri okunur: 1400 mA şarj akımı, 4,2 V bitiş gerilimi, 140 mA kesme akımı, ≈2830 mAh.
 
 ### Nasıl okunuyor?
@@ -66,9 +72,10 @@ Doğruluk resmin piksel çözünürlüğüyle sınırlıdır (tablo altında ± 
 
 ### Sınırlar
 
-* Otomatik bulunan grafikler: sayfaya çizilmiş (vektör) grafikler ve **içinde çerçeveli bir grafik bulunan resimler**.
-  Tam sayfa taranmış PDF'lerde ve PNG/JPG dosyalarında `Araçlar → Görselden elle sayısallaştır (gelişmiş)` (eski, her
-  şeyi elle yapılan araç) kullanılır; `python app.py resim.png` de onu açar.
+* Otomatik bulunan grafikler: sayfaya çizilmiş (vektör) grafikler, **içinde çerçeveli bir grafik bulunan resimler** ve
+  görsel dosyaları (PNG/JPG/BMP/TIFF/WebP). Tam sayfa taranmış PDF'lerde (sayfanın tamamı bir resim, içinde birkaç grafik)
+  `Araçlar → Görselden elle sayısallaştır (gelişmiş)` (eski, her şeyi elle yapılan araç; `python app.py --manual resim.png`)
+  ya da sayfayı görsel olarak kaydedip açmak gerekir.
 * Resim grafiklerde: eksen değerleri elle girilir (OCR yok); ikinci Y ekseni desteklenir ama üçüncüsü yoktur; kesikli, siyah
   ve gri eğrilerle çakışan eğriler için `＋ Eğri ekle` gerekebilir; başka eğrinin altında kalan bölümü resimde göremeyiz
   (vektör grafiklerden farklı olarak); eğrilerin eksenle kesiştiği ilk birkaç piksel kalın çerçeve yüzünden okunmayabilir.

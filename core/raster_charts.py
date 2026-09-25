@@ -60,6 +60,8 @@ class RasterChart:
     plot: Rect                       # frame centre-lines in image pixels
     ticks: Ticks
     traces: list = field(default_factory=list)      # RasterTrace of every curve read from the picture
+    frame_found: bool = True         # False: no frame was recognised, the plot area is a guess the user should correct
+    plot_manual: bool = False        # the user drew the plot area (it is remembered with the calibration)
 
     @property
     def rendered(self) -> RenderedRegion:
@@ -94,6 +96,7 @@ class RasterTrace:
     dashed: bool = False
     label: str = ""
     axis: int = 0                    # 0 = left Y axis, 1 = right Y axis
+    thick: float = 3.0               # stroke thickness in pixels (median height of the mask run)
 
 
 @dataclass
@@ -347,6 +350,40 @@ def curve_from_trace(index: int, tr: RasterTrace, chart: ChartData, rc: RasterCh
                        axis_note="" if len(chart.y_fits) < 2 else ("sağ eksen" if tr.axis else "sol eksen"))
 
 
+def set_plot_area(rc: RasterChart, plot: Rect, manual: bool = True) -> None:
+    """Use ``plot`` (picture pixels) as the plot area: tick marks are looked up again along its edges."""
+    rc.plot = plot
+    rc.ticks = detect_ticks(rc.image, plot)
+    rc.plot_manual = manual
+    rc.frame_found = True
+
+
+def chart_from_image(path) -> "ChartData":
+    """A chart from an image file (PNG, JPG, BMP, TIFF, WebP): the whole file is the picture.
+
+    The frame is searched like in a PDF's picture; when none is recognised the plot area starts as almost the whole
+    image (``frame_found`` is False) and the user is asked to outline it.  Picture pixels double as page points
+    (1 px = 1 pt), so every later step is the one of a picture chart inside a PDF.
+    """
+    from pathlib import Path
+
+    from .imageio import load_image
+
+    img = load_image(path)
+    h, w = img.shape[:2]
+    if h < 60 or w < 60:
+        raise ValueError("Görsel çok küçük.")
+    plot = detect_plot_area(img)
+    found = plot is not None
+    if plot is None:
+        plot = Rect(0.06 * w, 0.04 * h, 0.96 * w, 0.90 * h)
+    rc = RasterChart(0, 0, Path(path).stem, [], Rect(0.0, 0.0, float(w), float(h)), img, plot, detect_ticks(img, plot),
+                     frame_found=found)
+    cd = build_chart(rc)
+    cd.from_image = True
+    return cd
+
+
 def build_chart(rc: RasterChart) -> ChartData:
     """The gallery entry of a picture chart, before its axes are known."""
     b = rc.bbox
@@ -451,7 +488,24 @@ def _overlaps(x1, y1, x2, y2, tol: float = 3.0) -> float:
 
 
 def _make_trace(rgb, res, dashed: bool = False) -> RasterTrace:
-    return RasterTrace(tuple(int(v) for v in rgb), np.asarray(res.x_px), np.asarray(res.y_px), dashed)
+    thick = float(np.median(res.thickness_px)) if len(res) else 3.0
+    return RasterTrace(tuple(int(v) for v in rgb), np.asarray(res.x_px), np.asarray(res.y_px), dashed, thick=thick)
+
+
+def _same_line(a: RasterTrace, b: RasterTrace) -> float:
+    """Share of ``a`` that runs within the stroke width of ``b`` (an anti-aliasing / JPEG halo lies on its curve)."""
+    return _overlaps(a.x_px, a.y_px, b.x_px, b.y_px, tol=0.5 * max(a.thick, b.thick) + 3.0)
+
+
+def _prune(traces: list[RasterTrace]) -> list[RasterTrace]:
+    """Drop traces that lie on another one: the shorter of two traces that follow each other is an edge halo."""
+    keep = list(traces)
+    for a in sorted(traces, key=lambda t: len(t.x_px)):          # shortest first
+        for b in keep:
+            if b is not a and len(b.x_px) >= len(a.x_px) and _same_line(a, b) >= 0.7:
+                keep.remove(a)
+                break
+    return keep
 
 
 def colour_name(rgb) -> str:
@@ -504,9 +558,11 @@ def discover_curves(rc: RasterChart, params: ExtractionParams | None = None) -> 
             span = float(res.x_px[-1] - res.x_px[0])
             if span < need or len(res) < MIN_COVERAGE * span:
                 continue
-            if any(_overlaps(res.x_px, res.y_px, t.x_px, t.y_px) > 0.7 for t in traces):
+            new = _make_trace(rgb, res)
+            if any(_same_line(new, t) > 0.7 for t in traces):
                 continue
-            traces.append(_make_trace(rgb, res))
+            traces.append(new)
+    traces = _prune(traces)
     traces.sort(key=lambda t: float(np.mean(t.y_px)))
     for i, t in enumerate(traces):
         t.label = f"Eğri {i + 1} ({colour_name(t.rgb)})"

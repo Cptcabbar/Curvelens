@@ -147,8 +147,8 @@ def two_pages(path: Path):
 GREEN, BLUE, RED = "#20a040", "#2040d0", "#e02020"
 
 
-def picture_chart(path: Path, dual: bool = False, same_colour: bool = False):
-    """A page whose chart is only a *picture* (a 1200x760 px PNG pasted into the PDF), like many datasheets.
+def _picture_bitmap(dual: bool = False, same_colour: bool = False):
+    """The bitmap (1200x760 px RGB) of a chart plus its exact truth; see :func:`picture_chart`.
 
     A heading and a note line above it are real PDF text.  ``dual`` adds a right Y axis (0..100, green) with a
     green curve; ``same_colour`` draws that right-axis curve in the blue of a left-axis curve (a voltage and a
@@ -202,7 +202,19 @@ def picture_chart(path: Path, dual: bool = False, same_colour: bool = False):
                                    pos(axes2 if name == "temp" else ax, y_val=float(np.interp(xv, *curves[name])))),
     }
     plt.close(fig)
+    return img, truth
 
+
+def picture_chart(path: Path, dual: bool = False, same_colour: bool = False):
+    """A page whose chart is only a *picture* (a 1200x760 px PNG pasted into the PDF), like many datasheets.
+
+    A heading and a note line above it are real PDF text.  ``dual`` adds a right Y axis (0..100, green) with a
+    green curve; ``same_colour`` draws that right-axis curve in the blue of a left-axis curve (a voltage and a
+    temperature curve of one colour).  Returns ``(path, truth)``: the exact curves plus the exact pixel positions
+    (continuous picture coordinates) of the tick marks.
+    """
+    img, truth = _picture_bitmap(dual, same_colour)
+    h, w = img.shape[:2]
     page = plt.figure(figsize=(8.27, 11.69), dpi=72)          # A4, 1 unit = 1 point
     page.text(0.12, 0.918, "Picture chart", fontsize=11, weight="bold")
     page.text(0.12, 0.903, "Discharge at 25 C (2.5 V)", fontsize=9)
@@ -211,3 +223,25 @@ def picture_chart(path: Path, dual: bool = False, same_colour: bool = False):
     ax_img.axis("off")
     ax_img.imshow(img, interpolation="none", aspect="auto")
     return _save(page, path), truth
+
+
+def picture_file(path: Path, dual: bool = False, same_colour: bool = False, frame: bool = True, quality: int = 92):
+    """The chart as an image *file* (format from the suffix: .png, .jpg, .bmp, ...).  Returns ``(path, truth)``.
+
+    ``frame=False`` blanks the frame lines (a chart without a box) so that the plot area has to be drawn by hand.
+    ``quality`` is the JPEG quality.
+    """
+    import cv2
+
+    img, truth = _picture_bitmap(dual, same_colour)
+    if not frame:
+        x0, y0, x1, y1 = (int(round(v)) for v in truth["frame"])
+        pad = 4
+        for a, b, c, d in ((x0 - pad, y0 - pad, x1 + pad, y0 + pad), (x0 - pad, y1 - pad, x1 + pad, y1 + pad),
+                           (x0 - pad, y0 - pad, x0 + pad, y1 + pad), (x1 - pad, y0 - pad, x1 + pad, y1 + pad)):
+            region = img[max(b, 0):d, max(a, 0):c]
+            region[:] = 255
+    bgr = np.ascontiguousarray(img[..., ::-1])
+    ok = cv2.imencode(Path(path).suffix, bgr, [cv2.IMWRITE_JPEG_QUALITY, quality])[1]
+    Path(path).write_bytes(ok.tobytes())
+    return path, truth

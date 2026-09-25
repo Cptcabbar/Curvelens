@@ -27,6 +27,7 @@ from core import raster_charts as rcm
 from core.calibration_store import CalibrationStore, chart_key, pdf_fingerprint
 from core.lookup import LookupTable, auto_step, build_lookup, report_columns, to_html, uncertainty_text, write_csv
 from core.pdf_source import PdfSource, RenderedRegion
+from core.imageio import IMAGE_SUFFIXES
 from core.vector_charts import ChartData, CurveResult, analyze_pdf
 from ui import printing
 from ui.calibration_dialog import CalibrationDialog
@@ -62,8 +63,19 @@ def color_icon(rgb: tuple[int, int, int], dashed: bool = False, size: int = 18) 
     return QIcon(pm)
 
 
+def is_image_path(path: str) -> bool:
+    return str(path).lower().endswith(IMAGE_SUFFIXES)
+
+
+def analyze_file(path: str, progress=None) -> list[ChartData]:
+    """Charts of a PDF, or the one chart of an image file (PNG, JPG, BMP, TIFF, WebP)."""
+    if is_image_path(path):
+        return [rcm.chart_from_image(path)]
+    return analyze_pdf(path, progress)
+
+
 class AnalysisWorker(QThread):
-    """Reads all charts of a PDF off the GUI thread."""
+    """Reads all charts of a PDF (or an image) off the GUI thread."""
 
     progress = Signal(int, int, str)
     done = Signal(object)
@@ -75,8 +87,8 @@ class AnalysisWorker(QThread):
 
     def run(self) -> None:
         try:
-            charts = analyze_pdf(self.path, lambda i, n, text: self.progress.emit(i, n, text))
-        except Exception as exc:                                        # corrupt / encrypted / unsupported PDFs
+            charts = analyze_file(self.path, lambda i, n, text: self.progress.emit(i, n, text))
+        except Exception as exc:                                        # corrupt / encrypted / unsupported files
             self.failed.emit(str(exc))
         else:
             self.done.emit(charts)
@@ -116,7 +128,7 @@ class LookupWindow(QMainWindow):
 
     # ================================================================== building
     def _build_actions(self) -> None:
-        self.act_open = QAction("PDF aç…", self, shortcut=QKeySequence.StandardKey.Open, triggered=self.open_pdf_dialog)
+        self.act_open = QAction("PDF / görsel aç…", self, shortcut=QKeySequence.StandardKey.Open, triggered=self.open_pdf_dialog)
         self.act_back = QAction("← Grafikler", self, shortcut="Alt+Left", triggered=self.show_gallery)
         self.act_quit = QAction("Çıkış", self, shortcut="Ctrl+Q", triggered=self.close)
         self.act_manual = QAction("Görselden elle sayısallaştır (gelişmiş)…", self, triggered=self.open_manual_tool)
@@ -161,17 +173,17 @@ class LookupWindow(QMainWindow):
         title = QLabel("Grafiklerden lookup tablosu")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title.setStyleSheet("font-size: 26px; font-weight: 600;")
-        sub = QLabel("Bir PDF açın: içindeki tüm grafikler otomatik bulunur (çizili grafikler tam hassasiyetle, resim olarak\n"
-                     "gömülü olanlar eksen kalibrasyonuyla okunur). Sonra bir eğri seçip tabloyu, değer sorgusunu\n"
-                     "ve yazdırmayı kullanabilirsiniz.")
+        sub = QLabel("Bir PDF ya da grafik görseli (PNG, JPG, BMP…) açın: PDF'teki tüm grafikler otomatik bulunur (çizili\n"
+                     "grafikler tam hassasiyetle, resim olanlar eksen kalibrasyonuyla okunur). Sonra bir eğri seçip\n"
+                     "tabloyu, değer sorgusunu ve yazdırmayı kullanabilirsiniz.")
         sub.setAlignment(Qt.AlignmentFlag.AlignCenter)
         sub.setStyleSheet("font-size: 14px; color: gray;")
-        self.welcome_btn = QPushButton("PDF aç…")
+        self.welcome_btn = QPushButton("PDF / görsel aç…")
         self.welcome_btn.setMinimumHeight(48)
         self.welcome_btn.setMaximumWidth(260)
         self.welcome_btn.setStyleSheet("font-size: 16px;")
         self.welcome_btn.clicked.connect(self.open_pdf_dialog)
-        hint = QLabel("PDF dosyasını bu pencereye sürükleyip bırakabilirsiniz.")
+        hint = QLabel("PDF ya da görsel dosyasını bu pencereye sürükleyip bırakabilirsiniz.")
         hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
         hint.setStyleSheet("color: gray;")
         lay.addWidget(title)
@@ -324,6 +336,9 @@ class LookupWindow(QMainWindow):
         self.add_curve_btn = QPushButton("＋ Eğri ekle")
         self.add_curve_btn.setToolTip("Görselde bir eğrinin üstüne tıklayın: o eğri okunur")
         self.add_curve_btn.clicked.connect(self.start_add_curve)
+        self.plot_btn = QPushButton("Grafik alanı…")
+        self.plot_btn.setToolTip("Eksenlerin çerçevesini (grafik alanını) elle çizin: bulunamadıysa ya da yanlışsa")
+        self.plot_btn.clicked.connect(self.start_plot_area)
         self.dashed_check = QCheckBox("Kesikli")
         self.dashed_check.setToolTip("Eklenecek eğri kesikli/noktalı çizgiyse işaretleyin")
         self.rename_btn = QPushButton("Adı…")
@@ -334,7 +349,7 @@ class LookupWindow(QMainWindow):
         self.axis_btn.clicked.connect(self.switch_curve_axis)
         self.del_curve_btn = QPushButton("Eğriyi sil")
         self.del_curve_btn.clicked.connect(self.delete_curve)
-        for w in (self.calib_btn, self.add_curve_btn, self.dashed_check):
+        for w in (self.calib_btn, self.add_curve_btn, self.dashed_check, self.plot_btn):
             row.addWidget(w)
         row.addStretch(1)
         col.addLayout(row)
@@ -393,23 +408,28 @@ class LookupWindow(QMainWindow):
 
     # ================================================================== opening
     def open_pdf_dialog(self) -> None:
-        path, _ = QFileDialog.getOpenFileName(self, "PDF aç", "", "PDF (*.pdf);;Tüm dosyalar (*)")
+        exts = " ".join(f"*{e}" for e in IMAGE_SUFFIXES)
+        path, _ = QFileDialog.getOpenFileName(self, "PDF ya da grafik görseli aç", "",
+                                              f"PDF ve görseller (*.pdf {exts});;PDF (*.pdf);;Görseller ({exts});;Tüm dosyalar (*)")
         if path:
             self.open_pdf(path)
 
     def open_pdf(self, path: str, blocking: bool = False) -> None:
-        """Analyse a PDF (charts + exact curve data).  ``blocking=True`` skips the worker thread (tests, CLI)."""
+        """Analyse a PDF (charts + exact curve data) or an image file (one picture chart).
+
+        ``blocking=True`` skips the worker thread (tests, CLI).
+        """
         if self._worker is not None:
             return
         if blocking:
             try:
-                charts = analyze_pdf(path)
+                charts = analyze_file(path)
             except Exception as exc:
                 self._analysis_failed(str(exc))
                 return
             self._analysis_done(path, charts)
             return
-        self._progress = QProgressDialog("PDF analiz ediliyor…", None, 0, 0, self)
+        self._progress = QProgressDialog("Dosya analiz ediliyor…", None, 0, 0, self)
         self._progress.setWindowTitle(APP_NAME)
         self._progress.setWindowModality(Qt.WindowModality.WindowModal)
         self._progress.setMinimumDuration(0)
@@ -443,12 +463,13 @@ class LookupWindow(QMainWindow):
         self._chart = self._curve = self._table = None
         if self._src is not None:
             self._src.close()
-        try:
-            self._src = PdfSource(path)
-        except Exception as exc:
             self._src = None
-            QMessageBox.critical(self, APP_NAME, f"PDF açılamadı:\n{exc}")
-            return
+        if not is_image_path(path):
+            try:
+                self._src = PdfSource(path)
+            except Exception as exc:
+                QMessageBox.critical(self, APP_NAME, f"PDF açılamadı:\n{exc}")
+                return
         self.setWindowTitle(f"{APP_NAME} — {self.pdf_path.name}")
         try:
             self._pdf_hash = pdf_fingerprint(path) if any(c.kind == "raster" for c in charts) else None
@@ -469,13 +490,15 @@ class LookupWindow(QMainWindow):
     def _fill_gallery(self) -> None:
         self.gallery.clear()
         self.gallery_title.setText(f"{self.pdf_path.name if self.pdf_path else ''} — {len(self.charts)} grafik")
+        image_file = bool(self.charts) and self.charts[0].from_image
         for c in self.charts:
             if c.kind == "raster":
                 need = "kalibrasyon kayıtlı" if self._saved(c) else "kalibrasyon gerekli"
                 sub = "görsel grafik · " + (f"{len(c.curves)} eğri" if c.calibrated else need)
             else:
                 sub = f"{len(c.curves)} eğri"
-            item = QListWidgetItem(f"{c.title}\nSayfa {c.chart.page_index + 1} · {sub}")
+            where = "görsel dosya" if image_file else f"Sayfa {c.chart.page_index + 1}"
+            item = QListWidgetItem(f"{c.title}\n{where} · {sub.replace('görsel grafik · ', '') if image_file else sub}")
             if c.thumbnail is not None:
                 pm = ndarray_to_pixmap(c.thumbnail).scaledToWidth(THUMB_WIDTH, Qt.TransformationMode.SmoothTransformation)
                 item.setIcon(QIcon(pm))
@@ -485,20 +508,26 @@ class LookupWindow(QMainWindow):
 
     # drag & drop --------------------------------------------------------
     def dragEnterEvent(self, event) -> None:
-        if event.mimeData().hasUrls() and any(u.toLocalFile().lower().endswith(".pdf") for u in event.mimeData().urls()):
+        if event.mimeData().hasUrls() and any(self._is_supported(u.toLocalFile()) for u in event.mimeData().urls()):
             event.acceptProposedAction()
+
+    @staticmethod
+    def _is_supported(path: str) -> bool:
+        return path.lower().endswith(".pdf") or is_image_path(path)
 
     def dropEvent(self, event) -> None:
         for u in event.mimeData().urls():
-            if u.toLocalFile().lower().endswith(".pdf"):
+            if self._is_supported(u.toLocalFile()):
                 self.open_pdf(u.toLocalFile())
                 break
 
     # ================================================================== chart detail
     def show_chart(self, index: int) -> None:
-        if not (0 <= index < len(self.charts)) or self._src is None:
+        if not (0 <= index < len(self.charts)):
             return
         chart = self.charts[index]
+        if chart.kind != "raster" and self._src is None:
+            return
         self._chart = chart
         self._cancel_calibration()
         if chart.kind == "raster" and not chart.calibrated and self._restore_calibration(chart):
@@ -512,7 +541,8 @@ class LookupWindow(QMainWindow):
             finally:
                 QApplication.restoreOverrideCursor()
         self.view.set_image(self._rendered.image)
-        self.detail_title.setText(f"{chart.title}  ·  sayfa {chart.chart.page_index + 1}")
+        self.view.set_plot_area(chart.raster.plot if chart.kind == "raster" else None)
+        self.detail_title.setText(chart.title if chart.from_image else f"{chart.title}  ·  sayfa {chart.chart.page_index + 1}")
         notes = ("Grafik notları:\n" + "\n".join(f"• {n}" for n in chart.notes)) if chart.notes else ""
         self.notes_label.setText(notes)
         self._loading = True
@@ -709,6 +739,9 @@ class LookupWindow(QMainWindow):
             self._after_edit(f"Nokta eklendi: {fmt(xv, 6)}, {fmt(yv, 5)}")
 
     def _on_rect(self, rect) -> None:
+        if self.view.tool == Tool.PLOT_AREA:
+            self._plot_area_drawn(rect)
+            return
         if self.view.tool != Tool.ERASE or not self._need_curve_for_edit():
             return
         a = self._px_to_data(rect.x0, rect.y0)
@@ -773,10 +806,15 @@ class LookupWindow(QMainWindow):
         saved = self._saved(chart)
         if not cal:
             self.raster_status.setStyleSheet("color: #b9770e;")
-            self.raster_status.setText("Bu grafik PDF'in içinde bir görsel: değer okumak için önce eksenleri kalibre edin.")
+            if not chart.raster.frame_found:
+                self.raster_status.setText("Grafiğin çerçevesi otomatik bulunamadı: «Grafik alanı…» ile eksenlerin çerçevesini "
+                                           "çizin, sonra «Kalibre et».")
+            else:
+                self.raster_status.setText("Bu grafik bir görsel: değer okumak için önce eksenleri kalibre edin.")
         elif saved is not None:
             self.raster_status.setStyleSheet("color: gray;")
-            self.raster_status.setText(f"Kalibrasyon bu PDF için kayıtlı ({saved[3]}): bu grafik bir daha sorulmaz.")
+            what = "bu görsel" if chart.from_image else "bu PDF"
+            self.raster_status.setText(f"Kalibrasyon {what} için kayıtlı ({saved.saved}): bu grafik bir daha sorulmaz.")
         else:
             self.raster_status.setStyleSheet("color: gray;")
             self.raster_status.setText("Kalibrasyon kayıtlı değil (bu oturumda geçerli).")
@@ -784,6 +822,7 @@ class LookupWindow(QMainWindow):
         self.act_forget_cal.setEnabled(saved is not None)
         self.calib_btn.setText("Kalibre et" if not cal else "Yeniden kalibre et")
         self.add_curve_btn.setEnabled(cal)
+        self.plot_btn.setEnabled(True)
         self.dashed_check.setEnabled(cal)
         has = self._curve is not None
         self.rename_btn.setEnabled(has)
@@ -841,6 +880,44 @@ class LookupWindow(QMainWindow):
             return
         self.apply_calibration(*answer)
 
+    # ---- the plot area of a picture chart (auto-detected frame, or drawn by hand)
+    def start_plot_area(self) -> None:
+        if self._is_raster():
+            self._set_edit_tool(Tool.PLOT_AREA, "Eksenlerin oluşturduğu dikdörtgenin (çerçevenin) üstüne bir kutu sürükleyin")
+            self.statusBar().showMessage("Grafik alanı: çerçevenin sol-üst köşesinden sağ-alt köşesine sürükleyin.")
+
+    def _plot_area_drawn(self, rect) -> None:
+        chart = self._chart
+        if not self._is_raster() or rect.width < 40 or rect.height < 30:
+            self.statusBar().showMessage("Grafik alanı çok küçük: çerçevenin tamamını kapsayan bir kutu çizin.")
+            return
+        rc = chart.raster
+        if chart.calibrated and any(cv.edited for cv in chart.curves):
+            if QMessageBox.question(self, APP_NAME, "Grafik alanı değişince eğriler yeniden okunur; elle yaptığınız "
+                                    "düzeltmeler silinir. Devam edilsin mi?") != QMessageBox.StandardButton.Yes:
+                return
+        rcm.set_plot_area(rc, rect)
+        self.view.set_plot_area(rc.plot)
+        self._set_edit_tool(Tool.PAN)
+        if chart.calibrated:                                # the axes stay; only the search area for the curves changed
+            QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+            try:
+                rc.traces = rcm.discover_curves(rc)
+                for tr in rc.traces:
+                    tr.axis = min(rcm.guess_axis(rc, tr.rgb, len(chart.y_fits) > 1), len(chart.y_fits) - 1)
+                rcm.rebuild_curves(chart)
+            finally:
+                QApplication.restoreOverrideCursor()
+            self._reload_curve_list(0)
+            self._fill_gallery()
+            saved = self._saved(chart)
+            if saved is not None and self._pdf_hash is not None:                 # keep the remembered axes, add the new area
+                self._remember_calibration(chart, saved.x, saved.y, saved.y2)
+            self.statusBar().showMessage(f"Grafik alanı ayarlandı: {len(chart.curves)} eğri okundu.")
+        else:
+            self.statusBar().showMessage("Grafik alanı ayarlandı; şimdi «Kalibre et» ile eksenleri gösterin.")
+        self._refresh_raster_bar()
+
     # ---- remembered calibrations (per PDF content + chart): a chart is calibrated once, ever
     def _chart_key(self, chart: ChartData) -> str:
         rc = chart.raster
@@ -855,15 +932,18 @@ class LookupWindow(QMainWindow):
     def _remember_calibration(self, chart: ChartData, x, y, y2) -> bool:
         if self._pdf_hash is None or self.pdf_path is None:
             return False
-        return self.store.save(self._pdf_hash, self.pdf_path.name, self._chart_key(chart), x, y, y2)
+        rc = chart.raster
+        plot = (rc.plot.x0, rc.plot.y0, rc.plot.x1, rc.plot.y1) if rc.plot_manual else None
+        return self.store.save(self._pdf_hash, self.pdf_path.name, self._chart_key(chart), x, y, y2, plot)
 
     def _restore_calibration(self, chart: ChartData) -> bool:
         """Apply the remembered calibration of ``chart`` (``self._chart``); ``False`` when there is none / it is unusable."""
         saved = self._saved(chart)
         if saved is None:
             return False
-        x, y, y2, when = saved
-        return self.apply_calibration(x, y, y2, remember=False, restored_at=when or "?")
+        if saved.plot is not None:                           # the user had outlined the plot area: use it again
+            rcm.set_plot_area(chart.raster, rcm.Rect(*saved.plot))
+        return self.apply_calibration(saved.x, saved.y, saved.y2, remember=False, restored_at=saved.saved or "?")
 
     def forget_calibration(self) -> None:
         """Delete the remembered calibration of the shown chart (the chart stays calibrated until it is closed)."""
@@ -1103,7 +1183,8 @@ class LookupWindow(QMainWindow):
 
     def show_help(self) -> None:
         QMessageBox.information(self, "Kullanım", (
-            "1. PDF açın (Ctrl+O ya da sürükle-bırak). İçindeki tüm grafikler otomatik bulunur; sayfaya çizilmiş\n"
+            "1. PDF ya da grafik görseli (PNG, JPG, BMP, TIFF, WebP) açın (Ctrl+O ya da sürükle-bırak).\n"
+            "    PDF'teki tüm grafikler otomatik bulunur; sayfaya çizilmiş\n"
             "    (vektör) grafiklerin değerleri tam hassasiyetle okunur.\n"
             "2. Galeriden bir grafiğe tıklayın.\n"
             "3. Sağdaki listede eğrilerin ne anlama geldiği yazar (legend + eksen). Bir eğri seçin:\n"
@@ -1115,7 +1196,9 @@ class LookupWindow(QMainWindow):
             "işaret (tick) gösterip değerlerini yazın; eğriler renklerinden otomatik okunur. Eksik eğri için\n"
             "'＋ Eğri ekle' ile eğrinin üstüne tıklayın. Değerler resmin piksel çözünürlüğüyle sınırlıdır.\n"
             "Kalibrasyon kaydedilir: aynı PDF bir daha açıldığında o grafik sorulmadan hazır gelir.\n\n"
-            "Tam sayfa taranmış PDF'ler için: Araçlar → Görselden elle sayısallaştır."))
+            "Görsel dosyalarda (PNG/JPG/BMP…) grafiğin çerçevesi otomatik aranır; bulunamazsa 'Grafik alanı…' ile\n"
+            "çizin. Sonrası resim grafiklerle aynıdır.\n\n"
+            "Her şeyi elle yapmak için: Araçlar → Görselden elle sayısallaştır (gelişmiş)."))
 
     def closeEvent(self, event) -> None:
         if self._worker is not None:

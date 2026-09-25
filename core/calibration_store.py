@@ -17,6 +17,7 @@ import os
 import sys
 from datetime import datetime
 from pathlib import Path
+from typing import NamedTuple
 
 from .raster_charts import AxisPoints
 
@@ -68,6 +69,14 @@ def _axis_from_json(d) -> AxisPoints | None:
                       bool(d.get("log", False)))
 
 
+class Saved(NamedTuple):
+    x: AxisPoints
+    y: AxisPoints
+    y2: AxisPoints | None
+    saved: str                                    # when, "YYYY-MM-DD HH:MM"
+    plot: tuple[float, float, float, float] | None = None      # plot area the user drew (picture pixels), if any
+
+
 class CalibrationStore:
     """``get`` / ``save`` / ``forget`` of the calibration of one chart of one PDF."""
 
@@ -110,25 +119,30 @@ class CalibrationStore:
             return False                                   # read-only profile etc.: calibration just is not remembered
 
     # ------------------------------------------------------------------ API
-    def get(self, pdf_hash: str, key: str) -> tuple[AxisPoints, AxisPoints, AxisPoints | None, str] | None:
-        """``(x, y, y2, saved_at)`` of the chart, or ``None`` when nothing usable is stored."""
+    def get(self, pdf_hash: str, key: str) -> Saved | None:
+        """What is remembered for the chart, or ``None`` when nothing usable is stored."""
         entry = self._load()["pdfs"].get(pdf_hash, {}).get("charts", {}).get(key)
         if not entry:
             return None
         try:
             x, y = _axis_from_json(entry["x"]), _axis_from_json(entry["y"])
             y2 = _axis_from_json(entry.get("y2"))
+            plot = entry.get("plot")
+            plot = tuple(float(v) for v in plot) if plot else None
+            if plot is not None and len(plot) != 4:
+                raise ValueError("bad plot")
         except (KeyError, TypeError, ValueError):
             return None
-        return x, y, y2, str(entry.get("saved", ""))
+        return Saved(x, y, y2, str(entry.get("saved", "")), plot)
 
-    def save(self, pdf_hash: str, pdf_name: str, key: str, x: AxisPoints, y: AxisPoints, y2: AxisPoints | None) -> bool:
+    def save(self, pdf_hash: str, pdf_name: str, key: str, x: AxisPoints, y: AxisPoints, y2: AxisPoints | None,
+             plot: tuple[float, float, float, float] | None = None) -> bool:
         data = self._load()
         now = datetime.now().strftime("%Y-%m-%d %H:%M")
         rec = data["pdfs"].setdefault(pdf_hash, {"name": pdf_name, "charts": {}})
         rec["name"], rec["used"] = pdf_name, now
         rec.setdefault("charts", {})[key] = {"x": _axis_to_json(x), "y": _axis_to_json(y), "y2": _axis_to_json(y2),
-                                             "saved": now}
+                                             "plot": [float(v) for v in plot] if plot else None, "saved": now}
         return self._write(data)
 
     def forget(self, pdf_hash: str, key: str) -> bool:

@@ -338,6 +338,7 @@ class ChartData:
     calibrated: bool = True          # raster charts start uncalibrated: the axes are set by the user
     pixel_pt: float = 0.06           # finest position the source can give, in points (vector rounding / picture pixel)
     raster: object | None = None     # core.raster_charts.RasterChart of a picture chart
+    from_image: bool = False         # the chart is an image file of its own, not part of a PDF page
 
     @property
     def title(self) -> str:

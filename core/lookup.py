@@ -108,7 +108,8 @@ def build_lookup(chart: ChartData, curve: CurveResult, step: float | None = "aut
     xh = (f"{xfit.title}" if xfit and xfit.title else "X")
     yh = (f"{yfit.title}" if yfit and yfit.title else "Y")
     return LookupTable(chart.title, curve.label, curve.style_label, xh, yh, x, y, step, xdec, ydec, x_unc, y_unc,
-                       source, chart.chart.page_index + 1, list(chart.notes), chart.kind, curve.n_changes)
+                       source, 0 if chart.from_image else chart.chart.page_index + 1, list(chart.notes), chart.kind,
+                       curve.n_changes)
 
 
 def _unit_of(header: str) -> str:
@@ -159,7 +160,7 @@ def to_html(t: LookupTable, columns: int = 1) -> str:
         ("Grafik", t.chart_title),
         ("Eğri", f"{t.curve_label} ({t.style_label}) — Y: {t.y_header}, X: {t.x_header}"),
         ("Satır", f"{len(rows)} satır, {step_txt}. {t.method_text}; olası belirsizlik {uncertainty_text(t)}"),
-        ("Kaynak", (f"{t.source} · sayfa {t.page}" if t.source else f"sayfa {t.page}")
+        ("Kaynak", (f"{t.source} · sayfa {t.page}" if t.page and t.source else t.source or (f"sayfa {t.page}" if t.page else "-"))
                    + " · " + datetime.now().strftime("%d.%m.%Y %H:%M")),
     ]
     if notes:
@@ -180,7 +181,7 @@ def write_csv(t: LookupTable, path: str | Path) -> Path:
     """CSV with ``#`` comment lines (source, axes, uncertainty) followed by ``X,Y`` rows."""
     path = Path(path)
     lines = [f"# Lookup tablosu: {t.chart_title} / {t.curve_label} ({t.style_label})",
-             f"# Kaynak: {t.source} sayfa {t.page} ({t.method_text})",
+             f"# Kaynak: {t.source}{f' sayfa {t.page}' if t.page else ''} ({t.method_text})",
              f"# Olası belirsizlik: {uncertainty_text(t)}",
              "# Aralıklarda doğrusal interpolasyon; eğrinin X aralığı dışında değer yoktur"]
     with open(path, "w", encoding="utf-8-sig", newline="") as fh:

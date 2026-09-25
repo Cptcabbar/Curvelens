@@ -21,8 +21,8 @@ def test_round_trip_keeps_every_number_name_and_the_log_flag(tmp_path):
     assert st.save("h1", "a.pdf", "k1", x, y, y2)
     got = st.get("h1", "k1")
     assert got is not None
-    gx, gy, gy2, saved = got
-    assert gx == x and gy == y and gy2 == y2 and gy2.log and len(saved) == 16
+    gx, gy, gy2, saved, plot = got
+    assert gx == x and gy == y and gy2 == y2 and gy2.log and len(saved) == 16 and plot is None
     assert st.get("h1", "other") is None and st.get("h2", "k1") is None
 
 
@@ -114,3 +114,12 @@ def test_data_dir_can_be_redirected_and_tests_do_not_use_the_real_one(monkeypatc
     assert data_dir() == tmp_path
     monkeypatch.delenv("PLOT_DIGITIZER_DATA")
     assert data_dir().name == "PlotDigitizer"
+
+
+def test_a_hand_drawn_plot_area_is_remembered_too(tmp_path):
+    st = CalibrationStore(tmp_path / "c.json")
+    x, y, _ = axes()
+    st.save("h", "a.png", "k", x, y, None, plot=(10.0, 20.0, 300.5, 400.25))
+    assert st.get("h", "k").plot == (10.0, 20.0, 300.5, 400.25)
+    st.save("h", "a.png", "k", x, y, None)
+    assert st.get("h", "k").plot is None

@@ -1,7 +1,7 @@
 """Plot Digitizer entry point.
 
     python app.py [file.pdf]                     PDF -> gallery of charts -> curves -> lookup table
-    python app.py file.png                       scanned chart: the manual image digitiser
+    python app.py file.png                       chart picture (PNG/JPG/BMP...): calibrate + read its curves
     python app.py --manual [file]                the manual image digitiser
     python app.py --selftest [file.pdf]          headless check of the processing stack, then exit
     python app.py --screenshot out.png [file.pdf] [--page gallery|detail] [--chart N] [--curve M]
@@ -75,7 +75,7 @@ def _screenshot(app, args, log) -> int:
 def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv if argv is None else argv)
     parser = argparse.ArgumentParser(prog="PlotDigitizer", add_help=True)
-    parser.add_argument("file", nargs="?", help="PDF (or an image for the manual digitiser) to open")
+    parser.add_argument("file", nargs="?", help="PDF or chart image (PNG, JPG, BMP, TIFF, WebP) to open")
     parser.add_argument("--manual", action="store_true", help="open the manual image digitiser instead")
     parser.add_argument("--selftest", action="store_true", help="headless check of the processing stack, then exit")
     parser.add_argument("--screenshot", metavar="OUT.png", help="save a window screenshot and exit")
@@ -113,7 +113,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.screenshot:
         return _screenshot(app, args, log)
 
-    manual = args.manual or bool(args.file and args.file.lower().endswith(IMAGE_SUFFIXES))
+    manual = args.manual
     if manual:
         from ui.main_window import MainWindow
 
