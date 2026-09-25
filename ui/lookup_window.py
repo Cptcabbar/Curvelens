@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (QApplication, QButtonGroup, QCheckBox, QDoubleSpi
                                QVBoxLayout, QWidget)
 
 from core import raster_charts as rcm
+from core.calibration_store import CalibrationStore, chart_key, pdf_fingerprint
 from core.lookup import LookupTable, auto_step, build_lookup, report_columns, to_html, uncertainty_text, write_csv
 from core.pdf_source import PdfSource, RenderedRegion
 from core.vector_charts import ChartData, CurveResult, analyze_pdf
@@ -82,8 +83,10 @@ class AnalysisWorker(QThread):
 
 
 class LookupWindow(QMainWindow):
-    def __init__(self) -> None:
+    def __init__(self, store: CalibrationStore | None = None) -> None:
         super().__init__()
+        self.store = store or CalibrationStore()      # remembered axis calibrations of picture charts
+        self._pdf_hash: str | None = None
         self.setWindowTitle(APP_NAME)
         self.resize(1400, 850)
         self.setAcceptDrops(True)
@@ -122,6 +125,8 @@ class LookupWindow(QMainWindow):
         self.act_redo = QAction("Yinele", self, shortcut="Ctrl+Y", triggered=self.redo_edit)
         self.act_reset = QAction("Eğriyi özgün haline döndür", self, triggered=self.reset_edits)
         self.act_rename = QAction("Eğrinin adını değiştir…", self, shortcut="F2", triggered=self.rename_curve)
+        self.act_forget_cal = QAction("Bu grafiğin kayıtlı kalibrasyonunu sil", self, triggered=self.forget_calibration)
+        self.act_forget_cal.setEnabled(False)
 
         mb = self.menuBar()
         m = mb.addMenu("&Dosya")
@@ -135,6 +140,8 @@ class LookupWindow(QMainWindow):
         m.addAction(self.act_reset)
         m.addAction(self.act_rename)
         m = mb.addMenu("&Araçlar")
+        m.addAction(self.act_forget_cal)
+        m.addSeparator()
         m.addAction(self.act_manual)
         m = mb.addMenu("&Yardım")
         m.addAction(self.act_help)
@@ -269,7 +276,7 @@ class LookupWindow(QMainWindow):
         self.table.setAlternatingRowColors(True)
         self.table.verticalHeader().setDefaultSectionSize(22)
         self.table.horizontalHeader().setStretchLastSection(True)
-        self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)   # long X names stay readable
+        self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Interactive)
         rl.addWidget(self.table, 3)
         self.precision_label = QLabel("")
         self.precision_label.setWordWrap(True)
@@ -443,6 +450,10 @@ class LookupWindow(QMainWindow):
             QMessageBox.critical(self, APP_NAME, f"PDF açılamadı:\n{exc}")
             return
         self.setWindowTitle(f"{APP_NAME} — {self.pdf_path.name}")
+        try:
+            self._pdf_hash = pdf_fingerprint(path) if any(c.kind == "raster" for c in charts) else None
+        except OSError:
+            self._pdf_hash = None
         self._fill_gallery()
         if not charts:
             QMessageBox.information(self, APP_NAME, "Bu PDF'te çizim çerçevesi olan bir grafik bulunamadı.\n"
@@ -460,7 +471,8 @@ class LookupWindow(QMainWindow):
         self.gallery_title.setText(f"{self.pdf_path.name if self.pdf_path else ''} — {len(self.charts)} grafik")
         for c in self.charts:
             if c.kind == "raster":
-                sub = "görsel grafik · " + (f"{len(c.curves)} eğri" if c.calibrated else "kalibrasyon gerekli")
+                need = "kalibrasyon kayıtlı" if self._saved(c) else "kalibrasyon gerekli"
+                sub = "görsel grafik · " + (f"{len(c.curves)} eğri" if c.calibrated else need)
             else:
                 sub = f"{len(c.curves)} eğri"
             item = QListWidgetItem(f"{c.title}\nSayfa {c.chart.page_index + 1} · {sub}")
@@ -489,6 +501,8 @@ class LookupWindow(QMainWindow):
         chart = self.charts[index]
         self._chart = chart
         self._cancel_calibration()
+        if chart.kind == "raster" and not chart.calibrated and self._restore_calibration(chart):
+            return                                    # apply_calibration has shown the chart again, calibrated
         if chart.kind == "raster":                    # a picture inside the PDF: show its own pixels
             self._rendered = chart.raster.rendered
         else:
@@ -756,8 +770,18 @@ class LookupWindow(QMainWindow):
         if not on:
             return
         cal = chart.calibrated
-        self.raster_status.setVisible(not cal)
-        self.raster_status.setText("" if cal else "Bu grafik PDF'in içinde bir görsel: değer okumak için önce eksenleri kalibre edin.")
+        saved = self._saved(chart)
+        if not cal:
+            self.raster_status.setStyleSheet("color: #b9770e;")
+            self.raster_status.setText("Bu grafik PDF'in içinde bir görsel: değer okumak için önce eksenleri kalibre edin.")
+        elif saved is not None:
+            self.raster_status.setStyleSheet("color: gray;")
+            self.raster_status.setText(f"Kalibrasyon bu PDF için kayıtlı ({saved[3]}): bu grafik bir daha sorulmaz.")
+        else:
+            self.raster_status.setStyleSheet("color: gray;")
+            self.raster_status.setText("Kalibrasyon kayıtlı değil (bu oturumda geçerli).")
+        self.raster_status.setVisible(True)
+        self.act_forget_cal.setEnabled(saved is not None)
         self.calib_btn.setText("Kalibre et" if not cal else "Yeniden kalibre et")
         self.add_curve_btn.setEnabled(cal)
         self.dashed_check.setEnabled(cal)
@@ -817,10 +841,51 @@ class LookupWindow(QMainWindow):
             return
         self.apply_calibration(*answer)
 
-    def apply_calibration(self, x: rcm.AxisPoints, y: rcm.AxisPoints, y2: rcm.AxisPoints | None = None) -> None:
-        """Set the axes of the shown picture chart, read its curves (first time) and refresh the screen."""
-        if not self._is_raster():
+    # ---- remembered calibrations (per PDF content + chart): a chart is calibrated once, ever
+    def _chart_key(self, chart: ChartData) -> str:
+        rc = chart.raster
+        return chart_key(chart.chart.page_index, rc.bbox, rc.image.shape)
+
+    def _saved(self, chart: ChartData):
+        """``(x, y, y2, saved_at)`` remembered for this chart of this PDF, or ``None``."""
+        if self._pdf_hash is None or chart.kind != "raster":
+            return None
+        return self.store.get(self._pdf_hash, self._chart_key(chart))
+
+    def _remember_calibration(self, chart: ChartData, x, y, y2) -> bool:
+        if self._pdf_hash is None or self.pdf_path is None:
+            return False
+        return self.store.save(self._pdf_hash, self.pdf_path.name, self._chart_key(chart), x, y, y2)
+
+    def _restore_calibration(self, chart: ChartData) -> bool:
+        """Apply the remembered calibration of ``chart`` (``self._chart``); ``False`` when there is none / it is unusable."""
+        saved = self._saved(chart)
+        if saved is None:
+            return False
+        x, y, y2, when = saved
+        return self.apply_calibration(x, y, y2, remember=False, restored_at=when or "?")
+
+    def forget_calibration(self) -> None:
+        """Delete the remembered calibration of the shown chart (the chart stays calibrated until it is closed)."""
+        chart = self._chart
+        if chart is None or chart.kind != "raster" or self._pdf_hash is None:
             return
+        if self.store.forget(self._pdf_hash, self._chart_key(chart)):
+            self._fill_gallery()
+            self._refresh_raster_bar()
+            self.statusBar().showMessage("Kayıtlı kalibrasyon silindi; bu grafik bir sonraki açılışta yeniden kalibre edilecek.")
+        else:
+            self.statusBar().showMessage("Bu grafik için kayıtlı bir kalibrasyon yok.")
+
+    def apply_calibration(self, x: rcm.AxisPoints, y: rcm.AxisPoints, y2: rcm.AxisPoints | None = None, *,
+                          remember: bool = True, restored_at: str = "") -> bool:
+        """Set the axes of the shown picture chart, read its curves (first time) and refresh the screen.
+
+        ``remember`` stores the calibration for the next time this PDF is opened; ``restored_at`` marks a calibration
+        that came from that store (nothing is asked or stored again; an unusable one is dropped quietly).
+        """
+        if not self._is_raster():
+            return False
         chart = self._chart
         rc = chart.raster
         self._cancel_calibration()
@@ -828,8 +893,12 @@ class LookupWindow(QMainWindow):
         try:
             rcm.calibrate(chart, x, y, y2)
         except ValueError as exc:
+            if restored_at:
+                if self._pdf_hash is not None:
+                    self.store.forget(self._pdf_hash, self._chart_key(chart))
+                return False
             QMessageBox.warning(self, APP_NAME, str(exc))
-            return
+            return False
         QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
             if first:
@@ -841,10 +910,19 @@ class LookupWindow(QMainWindow):
             rcm.rebuild_curves(chart)
         finally:
             QApplication.restoreOverrideCursor()
+        kept = remember and self._remember_calibration(chart, x, y, y2)
         self._fill_gallery()
         self.show_chart(self.charts.index(chart))
-        self.statusBar().showMessage(f"Kalibre edildi: {len(chart.curves)} eğri okundu. Eksik ya da fazla eğri için "
-                                     "«＋ Eğri ekle» / «Eğriyi sil», hatalı noktalar için «Düzelt» araçlarını kullanın.")
+        if restored_at:
+            msg = (f"Kayıtlı kalibrasyon uygulandı ({restored_at}): {len(chart.curves)} eğri okundu. "
+                   "Yeniden kalibre etmeniz gerekmez.")
+        else:
+            msg = (f"Kalibre edildi: {len(chart.curves)} eğri okundu. "
+                   + ("Kalibrasyon kaydedildi: bu PDF'in bu grafiği bir daha sorulmaz. " if kept else
+                      "(Kalibrasyon kaydedilemedi.) " if remember else "")
+                   + "Eksik ya da fazla eğri için «＋ Eğri ekle» / «Eğriyi sil», hatalı noktalar için «Düzelt» araçlarını kullanın.")
+        self.statusBar().showMessage(msg)
+        return True
 
     # ---- adding, renaming, removing curves of a picture chart
     def _reload_curve_list(self, select: int | None = None) -> None:
@@ -949,6 +1027,8 @@ class LookupWindow(QMainWindow):
                              source=self.pdf_path.name if self.pdf_path else "")
         self._table = table
         self.table_model.set_data([table.x_header, table.y_header], [[a for a, _ in table.rows()], [b for _, b in table.rows()]])
+        hdr = self.table.horizontalHeader()                       # the X column is as wide as its (possibly long) name
+        self.table.setColumnWidth(0, max(110, hdr.fontMetrics().horizontalAdvance(table.x_header) + 34))
         yf = self._chart.y_fit_of(self._curve)
         self.table_caption.setText(f"<b>{self._curve.label}</b> — {table.y_header} / {table.x_header} · {len(table)} satır")
         self.precision_label.setText(f"Değerler {table.method_text}. Olası belirsizlik: "
@@ -1033,7 +1113,8 @@ class LookupWindow(QMainWindow):
             "6. CSV, PDF kaydet veya Yazdır ile çıktı alın.\n\n"
             "Grafik PDF'e resim olarak yapıştırılmışsa ('görsel grafik'): 'Kalibre et' ile X ve Y eksenlerinden ikişer\n"
             "işaret (tick) gösterip değerlerini yazın; eğriler renklerinden otomatik okunur. Eksik eğri için\n"
-            "'＋ Eğri ekle' ile eğrinin üstüne tıklayın. Değerler resmin piksel çözünürlüğüyle sınırlıdır.\n\n"
+            "'＋ Eğri ekle' ile eğrinin üstüne tıklayın. Değerler resmin piksel çözünürlüğüyle sınırlıdır.\n"
+            "Kalibrasyon kaydedilir: aynı PDF bir daha açıldığında o grafik sorulmadan hazır gelir.\n\n"
             "Tam sayfa taranmış PDF'ler için: Araçlar → Görselden elle sayısallaştır."))
 
     def closeEvent(self, event) -> None:

@@ -7,6 +7,7 @@ pytest.importorskip("matplotlib")
 from PySide6.QtWidgets import QApplication, QFileDialog, QInputDialog, QMessageBox      # noqa: E402
 
 from core.query import value_at                                                          # noqa: E402
+from core.calibration_store import CalibrationStore                                     # noqa: E402
 from core.raster_charts import AxisPoints                                                # noqa: E402
 from ui.image_view import Tool                                                           # noqa: E402
 from ui.lookup_window import LookupWindow                                                # noqa: E402
@@ -27,9 +28,9 @@ def picture(tmp_path_factory):
 
 
 @pytest.fixture()
-def win(app, picture):
+def win(app, picture, tmp_path):
     path, truth = picture
-    w = LookupWindow()
+    w = LookupWindow(store=CalibrationStore(tmp_path / "cal.json"))
     w.resize(1400, 850)
     w.show()
     app.processEvents()

@@ -43,6 +43,13 @@ görünür ("görsel grafik · kalibrasyon gerekli"; adı resmin üstündeki PDF
    **Adı…** (`F2`) ile değiştirin. Eksik ya da siyah/gri eğri için **＋ Eğri ekle** ile eğrinin üstüne tıklayın
    (kesikli çizgiyse "Kesikli"yi işaretleyin); fazla eğri için **Eğriyi sil**; yanlış eksene atananı **Eksen ⇄** çevirir.
 4. Sonrası vektör grafiklerle aynıdır: tablo, değer sorgula, düzelt, CSV/PDF/yazdır.
+5. **Kalibrasyon hatırlanır:** kalibrasyonu bitirince kendiliğinden kaydedilir; aynı PDF'i (ya da adı değişmiş bir kopyasını)
+   bir daha açtığınızda o grafik **sorulmadan** kalibre gelir ve eğrileri okunur (galeride "kalibrasyon kayıtlı" yazar).
+   PDF, dosya içeriğinin özetiyle tanınır: taşımak ya da yeniden adlandırmak sorun olmaz; içeriği değişen (başka) bir
+   PDF için yeniden sorulur. Değiştirmek için **Yeniden kalibre et** (eskisinin yerine yazılır); silmek için
+   `Araçlar → Bu grafiğin kayıtlı kalibrasyonunu sil`. Kayıt yalnızca kalibrasyonu içerir; eğri adları ve elle
+   düzeltmeler oturumla sınırlıdır. Dosya: `%APPDATA%\PlotDigitizer\calibrations.json` (`PLOT_DIGITIZER_DATA`
+   ortam değişkeniyle başka klasöre alınabilir; silmek her şeyi unutturur). Vektör grafikler kalibrasyon gerektirmez.
 
 Doğruluk resmin piksel çözünürlüğüyle sınırlıdır (tablo altında ± olarak yazar; Aspilsan grafiklerinde ≈ ±2 mAh, ±0,004 V).
 Şarj grafiğinde datasheet'in kendi değerleri okunur: 1400 mA şarj akımı, 4,2 V bitiş gerilimi, 140 mA kesme akımı, ≈2830 mAh.
@@ -93,6 +100,7 @@ core/
   lookup.py                X→Y tablosu, interpolasyon, ondalık basamak, HTML raporu, CSV
   query.py                 X→Y ve Y→X değer sorgusu (interpolasyon, çoklu çözüm, belirsizlik)
   curve_edit.py            elle düzeltme: nokta ekle/sil/taşı, geri al/yinele (GUI'siz)
+  calibration_store.py     resim grafiklerin kalibrasyonunu PDF içeriğine göre hatırlar (JSON)
   raster_charts.py         PDF'e resim olarak gömülü grafikler: bulma, tick tespiti, kalibrasyon, otomatik eğri okuma
   postprocess.py, calibration.py, models.py
   extraction.py, project.py, plotarea.py, export.py, imageio.py    eski görselden sayısallaştırma
