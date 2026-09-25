@@ -1,0 +1,12 @@
+# Runtime
+PySide6>=6.7
+opencv-python-headless>=4.9   # headless: avoids Qt plugin clashes with PySide6
+numpy>=1.26
+scipy>=1.11
+pandas>=2.1
+pypdfium2>=4.30               # PDF rasterisation + text/vector-layer access (Apache-2.0)
+
+# Development / packaging
+pytest>=8.0
+matplotlib>=3.8               # tests only: makes vector PDFs with a known answer
+pyinstaller>=6.0              # python build_exe.py -> dist/PlotDigitizer.exe

@@ -1,0 +1,333 @@
+﻿<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>WPD Karşılaştırma Raporu</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+  /* Kâğıt görünümü: tek tema, tüm renkler açıkça tanımlı */
+  :root {
+    color-scheme: light;
+    --paper: #ffffff; --ink: #16181b; --muted: #4b5259; --rule: #16181b; --hair: #c9ced3; --band: #e8eef3;
+    --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--paper); color: var(--ink); font: 400 15.5px/1.65 var(--serif); padding-inline: 16px; padding-block: 40px 72px; font-variant-numeric: lining-nums; }
+  main { max-width: 780px; margin-inline: auto; }
+  h1, h2, h3, p, ul, ol, figure, table { margin: 0; }
+  h1 { font-size: clamp(22px, 3.6vw, 28px); font-weight: 600; line-height: 1.3; text-wrap: balance; }
+  h2 { font-size: 18px; font-weight: 600; margin-top: 34px; margin-bottom: 10px; }
+  h3 { font-size: 15.5px; font-weight: 600; font-style: italic; margin-top: 18px; margin-bottom: 6px; }
+  p { text-align: justify; hyphens: auto; margin-bottom: 10px; }
+  p.left { text-align: left; }
+  figure.tbl.long { break-inside: auto; }
+  code, .mono { font-family: var(--mono); font-size: .86em; }
+  sub, sup { line-height: 0; }
+  .num, td.n, th.n { font-variant-numeric: tabular-nums lining-nums; }
+
+  .titleblock { border-bottom: 1.5px solid var(--rule); padding-bottom: 16px; margin-bottom: 8px; }
+  .kicker { font: 400 12px/1.4 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+  .meta { color: var(--muted); font-size: 13.5px; margin-top: 10px; }
+  .abstract { border-bottom: 1px solid var(--hair); padding-bottom: 8px; }
+  .abstract p { margin-bottom: 8px; }
+  .keywords { font-size: 14px; color: var(--muted); }
+
+  .eq { margin: 6px 0 10px 24px; font-size: 15px; display: flex; flex-direction: column; gap: 4px; }
+  .eq i { font-style: italic; }
+
+  figure.tbl { margin: 16px 0 18px; break-inside: avoid; }
+  figure.tbl figcaption { font-size: 14px; margin-bottom: 6px; text-align: left; }
+  figure.tbl figcaption b, figure.fig figcaption b { font-weight: 600; }
+  .scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; line-height: 1.35; border-top: 1.5px solid var(--rule); border-bottom: 1.5px solid var(--rule); }
+  thead th { font-weight: 600; border-bottom: 1px solid var(--rule); padding: 6px 9px; text-align: right; vertical-align: bottom; }
+  thead tr.grp th { text-align: center; border-bottom: 1px solid var(--hair); padding-bottom: 3px; }
+  thead tr.grp + tr th { padding-top: 4px; }
+  tbody td { padding: 4px 9px; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums lining-nums; }
+  tbody tr.sep td { border-top: 1px solid var(--hair); }
+  th:first-child, td:first-child { text-align: left; }
+  table.spec { font-size: 14px; }
+  table.spec td { text-align: left; white-space: normal; vertical-align: top; padding: 5px 9px; }
+  table.spec td:first-child { width: 26%; white-space: normal; font-weight: 600; }
+  table.spec tbody tr + tr td { border-top: 1px solid var(--hair); }
+  .tnote { font-size: 13px; color: var(--muted); margin-top: 5px; text-align: left; }
+
+  figure.fig { margin: 18px 0 20px; break-inside: avoid; }
+  figure.fig svg { width: 100%; height: auto; display: block; border: 1px solid var(--hair); }
+  figure.fig figcaption { font-size: 14px; margin-top: 6px; }
+  svg text { fill: #3a4046; font: 400 11px var(--serif); }
+  svg .grid { stroke: #dfe3e7; stroke-width: 1; }
+  svg .zero { stroke: #16181b; stroke-width: 1; }
+  svg .band { fill: var(--band); }
+
+  ol.refs { padding-left: 22px; font-size: 14px; }
+  ol.refs li { margin-bottom: 4px; }
+  ul.lim { padding-left: 20px; }
+  ul.lim li { margin-bottom: 6px; text-align: justify; }
+  .apx table { font-size: 12.5px; }
+  .apx tbody td { padding: 2px 8px; }
+
+  @media (max-width: 560px) { body { font-size: 15px; } p, ul.lim li { text-align: left; } }
+
+  @page { size: A4; margin: 17mm 16mm 18mm; @bottom-center { content: counter(page) " / " counter(pages); font: 9pt "Source Serif 4", Georgia, serif; color: #4b5259; } }
+  @media print {
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    body { font-size: 10.5pt; line-height: 1.5; padding: 0; }
+    main { max-width: none; }
+    h1 { font-size: 19pt; }
+    h2 { font-size: 13pt; margin-top: 20px; break-after: avoid; }
+    h3 { break-after: avoid; }
+    table { font-size: 9.2pt; }
+    table.spec { font-size: 9.6pt; }
+    thead th { padding: 4px 6px; } tbody td { padding: 3px 6px; }
+    thead { display: table-header-group; }
+    tr { break-inside: avoid; }
+    .scroll { overflow: visible; }
+    .apx table { font-size: 8pt; line-height: 1.15; }
+    .apx tbody td { padding: 0.5px 6px; }
+    .apx { break-before: page; }
+    .apx.first { break-before: auto; }
+    section[aria-labelledby="h-ek"] { break-before: page; }
+  }
+</style>
+
+<main>
+  <header class="titleblock">
+    <div class="kicker">Teknik rapor · 25 Eylül 2026</div>
+    <h1>Grafik Sayısallaştırmada Vektör Tabanlı Okuma ile WebPlotDigitizer 4.8'in Karşılaştırmalı Doğruluk Değerlendirmesi</h1>
+    <div class="meta">Veri kaynağı: Molicel INR-18650-P28A veri sayfası, deşarj hızı karakteristiği grafiği [1]</div>
+  </header>
+
+  <section class="abstract" aria-labelledby="h-ozet">
+    <h2 id="h-ozet">Özet</h2>
+    <p>Bu çalışmada, Molicel INR-18650-P28A hücresinin veri sayfasındaki deşarj hızı karakteristiği grafiğinin beş eğrisi (0,56; 2,8; 10; 20 ve 30 A) iki yöntemle sayısallaştırılmış ve sonuçlar 50–2800 mAh aralığında 50 mAh adımla karşılaştırılmıştır. Referans değerler (R), PDF dosyasındaki çizim yollarının koordinatlarından hesaplanmıştır. Karşılaştırılan okuma, aynı grafiğin 600 DPI görüntüsünden WebPlotDigitizer 4.8 (WPD) [2] ile elde edilmiştir. Toplam 273 karşılaştırma noktasında, kalibrasyon noktaları değiştirilmeden yapılan okumada (Koşul A) WPD'nin referanstan ortalama sapması +0,0035 ile +0,0055 V arasında, ortalama bağıl hata %0,13, %95'lik bağıl hata %0,18 ve en büyük bağıl hata %0,56 olarak bulunmuştur. Kalibrasyon noktaları 0,5 piksel kaydırıldığında (Koşul B) ortalama bağıl hata %0,04 olmuştur. Maske uygulanmayan okumada renkli eğrilerde en büyük mutlak sapma 0,66–0,93 V aralığındadır. Bu grafikte bir piksel, 0,00526 V ve 2,107 mAh'e karşılık gelmektedir.</p>
+    <p class="keywords"><b>Anahtar sözcükler:</b> grafik sayısallaştırma; WebPlotDigitizer; vektör PDF; ölçüm belirsizliği; lityum-iyon hücre deşarj eğrisi.</p>
+  </section>
+
+  <section aria-labelledby="h-amac">
+    <h2 id="h-amac">1. Amaç ve kapsam</h2>
+    <p>Çalışmanın amacı, bir veri sayfası grafiğinden değer okumanın iki yolunu, referans değerlere göre sapma ve bağıl hata cinsinden nicel olarak karşılaştırmaktır: (i) PDF dosyasının vektör verisinden doğrudan okuma, (ii) grafiğin raster görüntüsünden renk tabanlı otomatik çıkarma (WPD). Kapsam, tek bir grafik ve bu grafikteki beş eğri ile sınırlıdır.</p>
+  </section>
+
+  <section aria-labelledby="h-yontem">
+    <h2 id="h-yontem">2. Materyal ve yöntem</h2>
+
+    <h3>2.1 Veri ve deney düzeni</h3>
+    <p>Deney parametreleri Tablo 1'de verilmiştir.</p>
+    <figure class="tbl long">
+      <figcaption><b>Tablo 1.</b> Deney parametreleri.</figcaption>
+      <div class="scroll"><table class="spec"><tbody>
+        <tr><td>Grafik</td><td>Molicel INR-18650-P28A veri sayfası [1], <i>Discharge Rate Characteristics</i>. X ekseni: kapasite, 0–3000 mAh; Y ekseni: gerilim, 0–5 V.</td></tr>
+        <tr><td>Eğriler</td><td>0,56 A (kırmızı), 2,8 A (yeşil), 10 A (mavi), 20 A (siyah), 30 A (mor).</td></tr>
+        <tr><td>Görüntü</td><td>Grafik bölgesinin PDF'ten 600 DPI'da üretilmiş rasteri (PNG), 1645 × 1124 piksel.</td></tr>
+        <tr><td>Karşılaştırma ızgarası</td><td>X = 50, 100, …, 2800 mAh (56 nokta). Her eğri kendi X aralığında değerlendirilmiştir.</td></tr>
+        <tr><td>Referans (R)</td><td>PDF çizim yolu koordinatları. Eksen dönüşümü, tick etiketlerinin konumlarına doğrusal en küçük kareler uyumuyla yapılmıştır. Eğri değerleri ızgara noktalarında doğrusal interpolasyonla elde edilmiştir. Belirsizlik, PDF koordinatlarının yuvarlanmasından (yaklaşık 0,06 pt) türetilmiş olup ±0,0026 V ve ±1,2 mAh'tir.</td></tr>
+        <tr><td>WPD</td><td>Sürüm 4.8 [2] (<span class="mono">apps.automeris.io/wpd4/</span>), tarayıcıda çalıştırılmıştır.</td></tr>
+        <tr><td>WPD kalibrasyonu</td><td>İki eksen, dört nokta. Piksel (x, y) → değer: (308,79; 975,15) → 300 mAh; (1447,71; 975,15) → 2700 mAh; (167,14; 785,14) → 1,0 V; (167,14; 405,12) → 3,0 V. Noktalar, görüntüde ölçülen tick işaretlerinin merkezleridir. Eksenler doğrusaldır.</td></tr>
+        <tr><td>WPD algoritması</td><td>X Step w/ Interpolation: x<sub>min</sub> = 50, Δx = 50, x<sub>max</sub> = 2800, y<sub>min</sub> = 0, y<sub>max</sub> = 5, düzeltme yok. İkincil olarak Averaging Window (X adımı 10 piksel).</td></tr>
+        <tr><td>Renk ölçütü</td><td>Ön plan rengi, eğri rengidir: (255, 0, 0), (0, 255, 0), (0, 0, 255), (0, 0, 0), (255, 0, 255). RGB uzaklık eşiği 120.</td></tr>
+        <tr><td>Maske</td><td>Grafik iç alanı (176–1583 × 33–966 piksel); legend (1085–1310 × 515–780) ve not kutusu (295–880 × 790–945) çıkarılmıştır. Siyah eğri için ayrıca, eğri çevresinde ±12 piksel yarı genişlikli şerit maskesi uygulanmıştır.</td></tr>
+        <tr><td>Piksel çözünürlüğü</td><td>X: 2,107 mAh/piksel. Y: 0,00526 V/piksel.</td></tr>
+      </tbody></table></div>
+    </figure>
+    <p class="left">Kalibrasyon ve çıkarma, WPD'nin <code>Calibration</code>, <code>XYAxes</code>, <code>AutoDetectionData</code>, <code>XStepWithInterpolationAlgo</code> ve <code>AveragingWindowAlgo</code> sınıfları doğrudan çağrılarak yapılmıştır; arayüzde fareyle işlem yapılmamıştır. Siyah eğrinin şerit maskesi, referans değerlerden 0, 300, …, 2700 mAh noktalarında geçen 10 köşeli bir çokgen çizgi çevresinde oluşturulmuştur.</p>
+
+    <h3>2.2 Karşılaştırma koşulları</h3>
+    <p><b>Koşul A.</b> Kalibrasyon noktaları Tablo 1'deki koordinatlarla verilmiştir. <b>Koşul B.</b> Aynı noktaların piksel koordinatları her iki eksende 0,5 piksel azaltılmıştır. WPD piksel konumunu tamsayı indeks olarak bildirirken referans koordinat sisteminde piksel merkezi indeks + 0,5'tedir; bu koşul iki kuralı eşitlemek amacıyla uygulanmıştır. <b>Koşul C.</b> Aynı yazılımın görüntüden okuma modülü (CIELAB renk uzaklığı maskesi, ızgara çizgisi ayıklama, sütun bazlı ağırlıklı alt-piksel ağırlık merkezi), aynı görüntü, kalibrasyon ve maskeyle çalıştırılmıştır. Ayrıca Koşul A için maskeli ve maskesiz okumalar ile iki WPD algoritması karşılaştırılmıştır (Bölüm 3.4).</p>
+
+    <h3>2.3 Hata ölçütleri</h3>
+    <p>Her ızgara noktası <i>i</i> için sapma Δ<sub><i>i</i></sub> = <i>y</i><sub><i>i</i></sub> − <i>y</i><sub>R,<i>i</i></sub> (V) hesaplanmıştır; <i>n</i>, iki yöntemin ortak noktalarının sayısıdır.</p>
+    <div class="eq">
+      <div>ME = (1/<i>n</i>) Σ Δ<sub><i>i</i></sub>&nbsp;&nbsp;&nbsp; SD = [Σ (Δ<sub><i>i</i></sub> − ME)² / (<i>n</i> − 1)]<sup>1/2</sup></div>
+      <div>MAE = (1/<i>n</i>) Σ |Δ<sub><i>i</i></sub>|&nbsp;&nbsp;&nbsp; RMSE = [(1/<i>n</i>) Σ Δ<sub><i>i</i></sub>²]<sup>1/2</sup></div>
+      <div><i>e</i><sub>bağıl,<i>i</i></sub> = |Δ<sub><i>i</i></sub>| / <i>y</i><sub>R,<i>i</i></sub> × 100 %&nbsp;&nbsp;&nbsp; <i>e</i><sub>TÖ,<i>i</i></sub> = |Δ<sub><i>i</i></sub>| / 5 V × 100 %</div>
+    </div>
+    <p>Bağıl hatanın ortalaması, %95'lik değeri ve en büyüğü raporlanmıştır. <i>e</i><sub>TÖ</sub>, Y ekseninin tam ölçeğine (5 V) göre hatadır.</p>
+  </section>
+
+  <section aria-labelledby="h-bulgu">
+    <h2 id="h-bulgu">3. Bulgular</h2>
+
+    <h3>3.1 Koşul A: kalibrasyon noktaları değiştirilmeden</h3>
+    <p>Tablo 2'de Koşul A için sapma istatistikleri verilmiştir. Beş eğride de ortalama sapma pozitiftir (+0,0035 ile +0,0055 V); MAE 0,0035 ile 0,0055 V aralığındadır. En büyük mutlak sapma 0,0154 V (2,8 A, x = 2700 mAh) olarak bulunmuştur. Noktaların %65,9'i ±1 piksel (±0,00526 V) bandı içindedir.</p>
+    <figure class="tbl">
+      <figcaption><b>Tablo 2.</b> Koşul A: WPD (X Step, maskeli) ile referans arasındaki sapma, Δ = <i>y</i><sub>WPD</sub> − <i>y</i><sub>R</sub> (V). Parantez içi, en büyük mutlak sapmanın X konumudur (mAh).</figcaption>
+      <div class="scroll"><table>
+        <thead><tr><th>Eğri</th><th>n</th><th>ME</th><th>SD</th><th>MAE</th><th>RMSE</th><th>maks. |Δ| (X)</th></tr></thead>
+        <tbody><tr><td>0,56 A (kırmızı)</td><td>56</td><td>+0,0051</td><td>0,0009</td><td>0,0051</td><td>0,0051</td><td>0,0064 (1700)</td></tr><tr><td>2,8 A (yeşil)</td><td>54</td><td>+0,0055</td><td>0,0016</td><td>0,0055</td><td>0,0058</td><td>0,0154 (2700)</td></tr><tr><td>10 A (mavi)</td><td>54</td><td>+0,0046</td><td>0,0012</td><td>0,0046</td><td>0,0048</td><td>0,0076 (2700)</td></tr><tr><td>20 A (siyah)</td><td>55</td><td>+0,0043</td><td>0,0016</td><td>0,0044</td><td>0,0046</td><td>0,0085 (2750)</td></tr><tr><td>30 A (mor)</td><td>54</td><td>+0,0035</td><td>0,0010</td><td>0,0035</td><td>0,0036</td><td>0,0054 (2400)</td></tr></tbody>
+      </table></div>
+      <p class="tnote">20 A eğrisi, şerit maskesiyle okunmuştur.</p>
+    </figure>
+    <figure class="fig">
+      <svg id="chartA" viewBox="0 0 760 340" role="img" aria-label="Koşul A: referanstan sapma, X'e karşı"></svg>
+      <figcaption><b>Şekil 1.</b> Koşul A: sapma Δ = <i>y</i><sub>WPD</sub> − <i>y</i><sub>R</sub>, X'in fonksiyonu olarak. Gölgeli bant ±1 piksel (±0,00526 V) aralığıdır.</figcaption>
+    </figure>
+
+    <h3>3.2 Koşul B ve C</h3>
+    <p>Koşul B'de (kalibrasyon −0,5 piksel) ortalama sapma −0,0016 ile +0,0011 V, MAE 0,0010 ile 0,0019 V aralığındadır. Koşul C'de (piksel tabanlı okuma) ortalama sapma +0,0024 ile +0,0037 V, MAE 0,0024 ile 0,0037 V aralığındadır. Her iki koşulda da en büyük mutlak sapma, 2,8 A eğrisinin x = 2700 mAh noktasında gözlenmiştir (B: 0,0190 V, C: 0,0158 V).</p>
+    <figure class="tbl">
+      <figcaption><b>Tablo 3.</b> Koşul B ve C için sapma istatistikleri (V).</figcaption>
+      <div class="scroll"><table>
+        <thead>
+          <tr class="grp"><th></th><th></th><th colspan="4">Koşul B (WPD, −0,5 px)</th><th colspan="4">Koşul C (piksel yöntemi)</th></tr>
+          <tr><th>Eğri</th><th>n</th><th>ME</th><th>MAE</th><th>RMSE</th><th>maks. |Δ|</th><th>ME</th><th>MAE</th><th>RMSE</th><th>maks. |Δ|</th></tr>
+        </thead>
+        <tbody><tr><td>0,56 A (kırmızı)</td><td>56</td><td>+0,0010</td><td>0,0013</td><td>0,0017</td><td>0,0062</td><td>+0,0034</td><td>0,0034</td><td>0,0034</td><td>0,0048</td></tr><tr><td>2,8 A (yeşil)</td><td>54</td><td>+0,0011</td><td>0,0012</td><td>0,0030</td><td>0,0190</td><td>+0,0037</td><td>0,0037</td><td>0,0041</td><td>0,0158</td></tr><tr><td>10 A (mavi)</td><td>54</td><td>+0,0004</td><td>0,0010</td><td>0,0015</td><td>0,0076</td><td>+0,0031</td><td>0,0031</td><td>0,0032</td><td>0,0042</td></tr><tr><td>20 A (siyah)</td><td>55</td><td>−0,0001</td><td>0,0012</td><td>0,0018</td><td>0,0068</td><td>+0,0028</td><td>0,0028</td><td>0,0028</td><td>0,0043</td></tr><tr><td>30 A (mor)</td><td>54</td><td>−0,0016</td><td>0,0019</td><td>0,0022</td><td>0,0031</td><td>+0,0024</td><td>0,0024</td><td>0,0025</td><td>0,0038</td></tr></tbody>
+      </table></div>
+      <p class="tnote">Koşul C'de 10 A eğrisi için n = 53'tür.</p>
+    </figure>
+    <figure class="fig">
+      <svg id="chartB" viewBox="0 0 760 340" role="img" aria-label="Koşul B: referanstan sapma, X'e karşı"></svg>
+      <figcaption><b>Şekil 2.</b> Koşul B: sapma Δ = <i>y</i><sub>WPD</sub> − <i>y</i><sub>R</sub> (kalibrasyon −0,5 piksel).</figcaption>
+    </figure>
+    <figure class="fig">
+      <svg id="chartC" viewBox="0 0 760 340" role="img" aria-label="Koşul C: referanstan sapma, X'e karşı"></svg>
+      <figcaption><b>Şekil 3.</b> Koşul C: sapma Δ = <i>y</i><sub>C</sub> − <i>y</i><sub>R</sub> (piksel tabanlı okuma).</figcaption>
+    </figure>
+
+    <h3>3.3 Bağıl hata</h3>
+    <p>Bağıl hata istatistikleri Tablo 4 ve Tablo 5'te verilmiştir. Referansın kendi belirsizliği (±0,0026 V), okunan gerilime göre %0,063 ile %0,103 arasındadır (ortanca %0,076). Bir pikselin Y karşılığı (0,00526 V), ortanca gerilim değerinde (3,46 V) %0,152'dir; X karşılığı (2,107 mAh), 3000 mAh tam ölçeğin %0,07'sidir.</p>
+    <figure class="tbl">
+      <figcaption><b>Tablo 4.</b> Eğri bazında bağıl hata, <i>e</i><sub>bağıl</sub> (%). "Ort." aritmetik ortalama, "P95" %95'lik değer, "maks." en büyük değerdir; parantez içi X (mAh).</figcaption>
+      <div class="scroll"><table>
+        <thead>
+          <tr class="grp"><th></th><th colspan="3">Koşul A</th><th colspan="2">Koşul B</th><th colspan="2">Koşul C</th></tr>
+          <tr><th>Eğri</th><th>ort.</th><th>P95</th><th>maks. (X)</th><th>ort.</th><th>maks.</th><th>ort.</th><th>maks.</th></tr>
+        </thead>
+        <tbody><tr><td>0,56 A (kırmızı)</td><td>0,138</td><td>0,169</td><td>0,183 (2250)</td><td>0,036</td><td>0,224</td><td>0,093</td><td>0,174</td></tr><tr><td>2,8 A (yeşil)</td><td>0,156</td><td>0,182</td><td>0,564 (2700)</td><td>0,037</td><td>0,696</td><td>0,106</td><td>0,578</td></tr><tr><td>10 A (mavi)</td><td>0,134</td><td>0,182</td><td>0,288 (2700)</td><td>0,030</td><td>0,288</td><td>0,090</td><td>0,127</td></tr><tr><td>20 A (siyah)</td><td>0,134</td><td>0,178</td><td>0,328 (2750)</td><td>0,039</td><td>0,262</td><td>0,084</td><td>0,135</td></tr><tr><td>30 A (mor)</td><td>0,109</td><td>0,154</td><td>0,188 (2400)</td><td>0,062</td><td>0,107</td><td>0,077</td><td>0,112</td></tr></tbody>
+      </table></div>
+    </figure>
+    <figure class="tbl">
+      <figcaption><b>Tablo 5.</b> Tüm eğriler birlikte: bağıl hata (%) ve tam ölçeğe göre hata (5 V, %).</figcaption>
+      <div class="scroll"><table>
+        <thead>
+          <tr class="grp"><th></th><th></th><th colspan="4"><i>e</i><sub>bağıl</sub> (%)</th><th colspan="2"><i>e</i><sub>TÖ</sub> (%)</th><th></th></tr>
+          <tr><th>Koşul</th><th>n</th><th>ort.</th><th>ortanca</th><th>P95</th><th>maks.</th><th>ort.</th><th>maks.</th><th>|Δ| ≤ 1 px (%)</th></tr>
+        </thead>
+        <tbody><tr><td>A (WPD)</td><td>273</td><td>0,134</td><td>0,135</td><td>0,179</td><td>0,564</td><td>0,092</td><td>0,307</td><td>65,9</td></tr><tr><td>B (WPD, −0,5 px)</td><td>273</td><td>0,041</td><td>0,025</td><td>0,099</td><td>0,696</td><td>0,026</td><td>0,379</td><td>97,4</td></tr><tr><td>C (piksel yöntemi)</td><td>272</td><td>0,090</td><td>0,088</td><td>0,113</td><td>0,578</td><td>0,062</td><td>0,315</td><td>99,3</td></tr></tbody>
+      </table></div>
+    </figure>
+
+    <h3>3.4 Maske, algoritma ve renk eşiğinin etkisi</h3>
+    <p>Koşul A'daki kalibrasyonla, RGB eşiği 120 iken maskeli ve maskesiz okumalar ile iki WPD algoritmasının sonuçları Tablo 6'da verilmiştir. Renkli eğrilerde maskesiz X Step okumasında en büyük mutlak sapma 0,66–0,93 V'tur ve x = 2000 mAh'de gözlenmiştir; legend alanının X aralığı yaklaşık 1936–2410 mAh'tir.</p>
+    <figure class="tbl">
+      <figcaption><b>Tablo 6.</b> Maske ve algoritmaya göre MAE ve en büyük mutlak sapma (V), RGB eşiği 120.</figcaption>
+      <div class="scroll"><table>
+        <thead>
+          <tr class="grp"><th></th><th colspan="4">X Step</th><th colspan="4">Averaging Window</th></tr>
+          <tr class="grp"><th></th><th colspan="2">maskeli</th><th colspan="2">maskesiz</th><th colspan="2">maskeli</th><th colspan="2">maskesiz</th></tr>
+          <tr><th>Eğri</th><th>MAE</th><th>maks.</th><th>MAE</th><th>maks.</th><th>MAE</th><th>maks.</th><th>MAE</th><th>maks.</th></tr>
+        </thead>
+        <tbody><tr><td>0,56 A</td><td>0,0051</td><td>0,0064</td><td>0,0380</td><td>0,6581</td><td>0,0035</td><td>0,0057</td><td>0,0144</td><td>0,4116</td></tr><tr><td>2,8 A</td><td>0,0055</td><td>0,0154</td><td>0,0447</td><td>0,7180</td><td>0,0037</td><td>0,0068</td><td>0,0173</td><td>0,4882</td></tr><tr><td>10 A</td><td>0,0046</td><td>0,0076</td><td>0,0470</td><td>0,7763</td><td>0,0031</td><td>0,0067</td><td>0,0677</td><td>1,4244</td></tr><tr><td>20 A</td><td>0,2442</td><td>2,6966</td><td>1,4347</td><td>2,8683</td><td>0,3905</td><td>3,0469</td><td>2,4518</td><td>3,9038</td></tr><tr><td>30 A</td><td>0,0035</td><td>0,0054</td><td>0,0547</td><td>0,9313</td><td>0,0028</td><td>0,0046</td><td>0,0585</td><td>1,5485</td></tr></tbody>
+      </table></div>
+      <p class="tnote">20 A eğrisinde "maskeli", tüm grafik alanının maskesidir; şerit maskesi Tablo 7'dedir.</p>
+    </figure>
+    <p>Siyah (20 A) eğri için sonuçlar Tablo 7'de verilmiştir. Tüm alan maskesiyle X Step okumasında, RGB eşiği 40 iken 300 mAh'in katlarındaki noktalarda (300, 600, …, 2700 mAh) 0,73–0,91 V aralığında değerler ve x = 50 mAh'te 2,74 V okunmuştur. Şerit maskesiyle MAE 0,0044 V'a düşmüştür.</p>
+    <figure class="tbl">
+      <figcaption><b>Tablo 7.</b> 20 A (siyah) eğrisi, X Step: renk eşiği ve maske türüne göre MAE ve en büyük mutlak sapma (V).</figcaption>
+      <div class="scroll"><table>
+        <thead><tr><th>Maske</th><th>RGB eşiği</th><th>MAE</th><th>maks. |Δ|</th></tr></thead>
+        <tbody><tr><td>Tüm alan</td><td>10</td><td>0,4335</td><td>2,7850</td></tr><tr><td>Tüm alan</td><td>20</td><td>0,4291</td><td>2,7850</td></tr><tr><td>Tüm alan</td><td>30</td><td>0,4280</td><td>2,7850</td></tr><tr><td>Tüm alan</td><td>40</td><td>0,4251</td><td>2,7850</td></tr><tr><td>Tüm alan</td><td>60</td><td>0,4188</td><td>2,7854</td></tr><tr><td>Tüm alan</td><td>80</td><td>0,4068</td><td>2,7858</td></tr><tr><td>Tüm alan</td><td>120</td><td>0,2442</td><td>2,6966</td></tr><tr><td>Şerit, ±12 px</td><td>120</td><td>0,0044</td><td>0,0085</td></tr><tr><td>Şerit, ±25 px</td><td>120</td><td>0,0049</td><td>0,0200</td></tr></tbody>
+      </table></div>
+    </figure>
+
+    <h3>3.5 Eğrinin dik bölgesinde çözünürlük</h3>
+    <p>En büyük mutlak sapma, 2,8 A eğrisinin x = 2700 mAh noktasındadır (Koşul A: +0,0154 V). Referansa göre bu eğrinin 2650–2700 mAh arasındaki ortalama eğimi 0,0040 V/mAh'dir. Bu eğimde, bir piksellik X çözünürlüğü (2,107 mAh) 0,0083 V'a karşılık gelir.</p>
+  </section>
+
+  <section aria-labelledby="h-sinir">
+    <h2 id="h-sinir">4. Sınırlamalar</h2>
+    <ul class="lim">
+      <li>Çalışma tek bir grafik, tek bir görüntü ve beş eğri (eğri başına 54–56 nokta) ile sınırlıdır.</li>
+      <li>Görüntü, PDF dosyasından üretilmiştir; taranmış ya da kayıplı sıkıştırılmış bir kaynak kullanılmamıştır.</li>
+      <li>WPD kalibrasyonu ve çıkarması programatik çağrılarla yapılmıştır. Fareyle elle kalibrasyon ve seçimin getireceği hata ölçülmemiştir. Kalibrasyonda bir piksellik kayma, Y'de 0,00526 V (okunan değere göre yaklaşık %0,13–0,20) ve X'te 2,107 mAh'e karşılık gelir.</li>
+      <li>WPD'nin barındırılan güncel sürümü (<span class="mono">automeris.io/wpd/</span>) oturum gerektirdiğinden 4.8 sürümü kullanılmıştır.</li>
+      <li>Siyah eğrinin şerit maskesi, referans değerlerden geçen çokgen bir çizgiden oluşturulmuştur; maske referanstan tamamen bağımsız değildir (şerit yarı genişliği 12 piksel ≈ 0,063 V).</li>
+      <li>Ana karşılaştırma X Step algoritmasıyla yapılmıştır; Averaging Window yalnızca Tablo 6'da verilmiştir.</li>
+      <li>Referans değer, ±0,0026 V ve ±1,2 mAh belirsizlik taşır; raporlanan sapmalar bu belirsizliği içerir.</li>
+      <li>X ekseni hatası ayrıca ölçülmemiştir; X'teki hata yalnızca eğri üzerinden Y'ye yansıyan bileşeniyle değerlendirilmiştir.</li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="h-kaynak">
+    <h2 id="h-kaynak">Kaynaklar</h2>
+    <ol class="refs">
+      <li>Molicel. <i>INR-18650-P28A ürün veri sayfası</i>, dosya: INR18650P28A-V1-80093.pdf.</li>
+      <li>Rohatgi, A. <i>WebPlotDigitizer</i>, sürüm 4.8. https://automeris.io</li>
+    </ol>
+  </section>
+
+  <section aria-labelledby="h-ek">
+    <h2 id="h-ek">Ek A. Tam değerler</h2>
+    <p>Beş eğrinin tüm karşılaştırma noktaları, Tablo A1–A5'te verilmiştir (V). Aynı veri, <span class="mono">samples/wpd_karsilastirma.csv</span> dosyasındadır.</p>
+    <div id="apx"></div>
+  </section>
+</main>
+
+<script>
+const D = {"xs": [50, 100, 150, 200, 250, 300, 350, 400, 450, 500, 550, 600, 650, 700, 750, 800, 850, 900, 950, 1000, 1050, 1100, 1150, 1200, 1250, 1300, 1350, 1400, 1450, 1500, 1550, 1600, 1650, 1700, 1750, 1800, 1850, 1900, 1950, 2000, 2050, 2100, 2150, 2200, 2250, 2300, 2350, 2400, 2450, 2500, 2550, 2600, 2650, 2700, 2750, 2800], "curves": [{"ref": [4.1398, 4.1131, 4.0953, 4.0783, 4.0603, 4.0425, 4.0249, 4.0021, 3.9845, 3.9648, 3.949, 3.9313, 3.9122, 3.8965, 3.8807, 3.8649, 3.849, 3.8334, 3.8177, 3.8005, 3.7809, 3.7651, 3.7477, 3.7305, 3.7177, 3.7002, 3.6863, 3.6705, 3.6579, 3.6456, 3.6337, 3.6232, 3.6075, 3.6013, 3.5885, 3.5759, 3.5654, 3.5511, 3.5388, 3.5212, 3.5036, 3.4813, 3.4632, 3.4446, 3.433, 3.415, 3.3928, 3.3592, 3.3201, 3.2754, 3.226, 3.1689, 3.0963, 3.0239, 2.9288, 2.7751], "A": [4.1445, 4.1181, 4.1015, 4.0834, 4.0655, 4.0483, 4.0285, 4.0077, 3.9898, 3.9709, 3.9552, 3.9366, 3.9182, 3.9024, 3.8866, 3.8708, 3.8553, 3.8393, 3.8235, 3.8057, 3.7867, 3.771, 3.7524, 3.7345, 3.7237, 3.7044, 3.6919, 3.6762, 3.6618, 3.6498, 3.6393, 3.6288, 3.613, 3.6077, 3.5924, 3.5814, 3.5709, 3.555, 3.5448, 3.5249, 3.5077, 3.4867, 3.4665, 3.4498, 3.4393, 3.4179, 3.3971, 3.3647, 3.3234, 3.2798, 3.2303, 3.1732, 3.1008, 3.029, 2.9326, 2.7787], "B": [4.1419, 4.1134, 4.0974, 4.0811, 4.0604, 4.0448, 4.0249, 4.0024, 3.9868, 3.9656, 3.9498, 3.934, 3.913, 3.8972, 3.8814, 3.8656, 3.8498, 3.834, 3.8182, 3.8026, 3.7814, 3.7656, 3.7498, 3.7323, 3.7182, 3.7021, 3.6866, 3.6707, 3.6596, 3.6444, 3.634, 3.6235, 3.6075, 3.6024, 3.5902, 3.5761, 3.5656, 3.5499, 3.5392, 3.5228, 3.5023, 3.4813, 3.4644, 3.4446, 3.434, 3.4142, 3.3918, 3.3607, 3.3186, 3.277, 3.2282, 3.1706, 3.1001, 3.0262, 2.9325, 2.7813], "C": [4.1434, 4.1168, 4.0989, 4.0823, 4.064, 4.0462, 4.0295, 4.0059, 3.988, 3.9683, 3.9525, 3.9351, 3.9156, 3.9004, 3.8841, 3.8683, 3.8526, 3.8366, 3.8209, 3.8036, 3.7841, 3.7683, 3.7509, 3.734, 3.7207, 3.7033, 3.6894, 3.674, 3.6611, 3.649, 3.6367, 3.6262, 3.6111, 3.6042, 3.5919, 3.5788, 3.5683, 3.5546, 3.5416, 3.5243, 3.5068, 3.4844, 3.4664, 3.4472, 3.4357, 3.4182, 3.3956, 3.3624, 3.3231, 3.2792, 3.2287, 3.172, 3.1007, 3.0276, 2.9328, 2.7799]}, {"ref": [4.0786, 4.0541, 4.0331, 4.0173, 4.0012, 3.9806, 3.9598, 3.9385, 3.9185, 3.8965, 3.8771, 3.8597, 3.841, 3.823, 3.8102, 3.7921, 3.7793, 3.7651, 3.7485, 3.7336, 3.7178, 3.702, 3.6863, 3.6705, 3.6547, 3.638, 3.6232, 3.6075, 3.5917, 3.5763, 3.5654, 3.5507, 3.5391, 3.5251, 3.5129, 3.5024, 3.4868, 3.4761, 3.4614, 3.4496, 3.434, 3.4183, 3.4025, 3.388, 3.371, 3.35, 3.3233, 3.2887, 3.2492, 3.1977, 3.134, 3.0508, 2.922, 2.7242, null, null], "A": [4.084, 4.0602, 4.0393, 4.0235, 4.0078, 3.9867, 3.9661, 3.9445, 3.9233, 3.9024, 3.8812, 3.8656, 3.845, 3.8288, 3.815, 3.7971, 3.7852, 3.7708, 3.7549, 3.7393, 3.7235, 3.7077, 3.6919, 3.6761, 3.6603, 3.6442, 3.6288, 3.613, 3.5972, 3.5814, 3.5708, 3.5549, 3.5446, 3.5288, 3.5183, 3.5077, 3.492, 3.4814, 3.4652, 3.4555, 3.4393, 3.4235, 3.4077, 3.3921, 3.3761, 3.3549, 3.3292, 3.2914, 3.2553, 3.2016, 3.1384, 3.0547, 2.9299, 2.7396, null, null], "B": [4.0814, 4.0551, 4.034, 4.0182, 4.0024, 3.9813, 3.96, 3.9393, 3.9185, 3.8972, 3.8778, 3.8603, 3.8428, 3.8233, 3.8127, 3.792, 3.7816, 3.7656, 3.7498, 3.734, 3.718, 3.7024, 3.6866, 3.6709, 3.6551, 3.6394, 3.6235, 3.6077, 3.5919, 3.576, 3.5657, 3.5507, 3.5393, 3.5261, 3.5127, 3.5025, 3.4862, 3.4761, 3.4621, 3.4497, 3.434, 3.4182, 3.4024, 3.3861, 3.3709, 3.3499, 3.3235, 3.2911, 3.2497, 3.201, 3.1354, 3.0521, 2.9295, 2.7432, null, null], "C": [4.0827, 4.0582, 4.0372, 4.0214, 4.0053, 3.9845, 3.9637, 3.9424, 3.9218, 3.9003, 3.8799, 3.8636, 3.8442, 3.8269, 3.8137, 3.7954, 3.7833, 3.7681, 3.7525, 3.7372, 3.7216, 3.7056, 3.6898, 3.6735, 3.6582, 3.6419, 3.6266, 3.6109, 3.5951, 3.5796, 3.5688, 3.5534, 3.5424, 3.5278, 3.5163, 3.5049, 3.4901, 3.4794, 3.464, 3.4529, 3.4372, 3.421, 3.4056, 3.3904, 3.374, 3.353, 3.3268, 3.2917, 3.2528, 3.2014, 3.1375, 3.0536, 2.9295, 2.74, null, null]}, {"ref": [3.9015, 3.878, 3.861, 3.8472, 3.8287, 3.8148, 3.8013, 3.7825, 3.7633, 3.7441, 3.7257, 3.7118, 3.6947, 3.6795, 3.6654, 3.6469, 3.6332, 3.6193, 3.6055, 3.5919, 3.573, 3.5572, 3.5407, 3.5224, 3.5076, 3.4892, 3.4753, 3.4618, 3.4437, 3.429, 3.4157, 3.4049, 3.39, 3.3795, 3.366, 3.3523, 3.3388, 3.3271, 3.3165, 3.3026, 3.2842, 3.2703, 3.2572, 3.2378, 3.2169, 3.1942, 3.1681, 3.1405, 3.1035, 3.0547, 2.9948, 2.9211, 2.8157, 2.6437, null, null], "A": [3.9077, 3.882, 3.8657, 3.8518, 3.834, 3.8192, 3.8078, 3.7867, 3.7683, 3.7497, 3.7308, 3.7182, 3.6998, 3.684, 3.671, 3.6499, 3.6396, 3.6236, 3.61, 3.5971, 3.5773, 3.5601, 3.5446, 3.529, 3.5129, 3.4942, 3.4815, 3.4654, 3.45, 3.434, 3.4185, 3.4089, 3.3946, 3.384, 3.3709, 3.3549, 3.3446, 3.3314, 3.321, 3.3079, 3.2866, 3.2763, 3.2601, 3.2418, 3.2208, 3.1971, 3.1703, 3.1445, 3.1076, 3.059, 2.9988, 2.9257, 2.8192, 2.6513, null, null], "B": [3.9024, 3.879, 3.86, 3.8495, 3.8287, 3.8157, 3.8024, 3.7812, 3.7633, 3.7446, 3.726, 3.713, 3.6944, 3.6801, 3.6656, 3.6475, 3.6339, 3.6179, 3.6076, 3.5919, 3.5735, 3.5571, 3.5393, 3.5234, 3.5078, 3.4892, 3.4761, 3.4613, 3.4445, 3.4288, 3.4162, 3.4053, 3.389, 3.3814, 3.3656, 3.351, 3.3393, 3.3263, 3.3164, 3.3024, 3.2837, 3.2708, 3.2563, 3.2386, 3.2182, 3.1924, 3.1685, 3.1394, 3.1028, 3.0549, 2.9962, 2.9233, 2.8192, 2.6513, null, null], "C": [3.9053, 3.8822, 3.8643, 3.8506, 3.8322, 3.8187, 3.8044, 3.7859, 3.7664, 3.7476, 3.7295, 3.7144, 3.698, 3.6822, 3.6687, 3.6506, 3.6362, 3.6226, 3.6085, 3.5951, 3.5767, 3.5611, 3.544, 3.5245, 3.5108, 3.4927, 3.4778, 3.4651, 3.4456, 3.432, 3.419, 3.4085, 3.3927, 3.3822, 3.3688, 3.3557, 3.3414, 3.3296, 3.319, 3.3054, 3.2875, 3.2727, 3.2607, 3.2401, 3.2193, 3.1973, 3.1714, 3.143, 3.1062, 3.058, 2.9974, 2.9246, 2.8193, null, null, null]}, {"ref": [3.7049, 3.6791, 3.6645, 3.6549, 3.6456, 3.6361, 3.6265, 3.6121, 3.5975, 3.5836, 3.5701, 3.5531, 3.5382, 3.5234, 3.5103, 3.4964, 3.4832, 3.4693, 3.4552, 3.4407, 3.4231, 3.4091, 3.3914, 3.3768, 3.3629, 3.347, 3.3305, 3.3167, 3.3027, 3.2882, 3.2734, 3.2625, 3.2493, 3.2346, 3.2252, 3.2105, 3.2009, 3.1864, 3.1768, 3.162, 3.1497, 3.1361, 3.1223, 3.1038, 3.0898, 3.0686, 3.0449, 3.0163, 2.9825, 2.9428, 2.8934, 2.8414, 2.7728, 2.6934, 2.582, null], "A": [3.7077, 3.684, 3.6697, 3.6603, 3.6498, 3.6391, 3.6313, 3.6181, 3.6025, 3.5879, 3.5755, 3.5577, 3.5425, 3.5287, 3.5153, 3.5026, 3.4864, 3.4743, 3.4604, 3.4446, 3.4291, 3.4131, 3.3972, 3.3797, 3.3671, 3.3521, 3.334, 3.3206, 3.3079, 3.2954, 3.2765, 3.2653, 3.2544, 3.2393, 3.2288, 3.2078, 3.2051, 3.1921, 3.1813, 3.1656, 3.1549, 3.1367, 3.1258, 3.1078, 3.0946, 3.0715, 3.05, 3.0202, 2.9866, 2.9463, 2.8971, 2.8447, 2.7765, 2.6968, 2.5905, null], "B": [3.7077, 3.6788, 3.6659, 3.6551, 3.6445, 3.6349, 3.6262, 3.613, 3.5971, 3.5841, 3.571, 3.5551, 3.5396, 3.5236, 3.5102, 3.4971, 3.4823, 3.4704, 3.4551, 3.4392, 3.4234, 3.4074, 3.3919, 3.3708, 3.363, 3.3473, 3.3289, 3.3165, 3.3024, 3.287, 3.2737, 3.2616, 3.25, 3.234, 3.2234, 3.205, 3.1999, 3.1866, 3.1762, 3.1604, 3.1499, 3.1347, 3.1221, 3.1022, 3.0893, 3.0684, 3.0446, 3.0179, 2.9815, 2.9452, 2.8952, 2.8392, 2.774, 2.6961, 2.5888, null], "C": [3.7079, 3.6822, 3.6665, 3.658, 3.6492, 3.6386, 3.6295, 3.6141, 3.6006, 3.5873, 3.5725, 3.5565, 3.5402, 3.5265, 3.5138, 3.4987, 3.4869, 3.4707, 3.458, 3.444, 3.4256, 3.4121, 3.3932, 3.3797, 3.3663, 3.3506, 3.3338, 3.319, 3.3053, 3.2907, 3.2769, 3.266, 3.2507, 3.2373, 3.2282, 3.2148, 3.2033, 3.1879, 3.1793, 3.1647, 3.1516, 3.1394, 3.1243, 3.1062, 3.0927, 3.0716, 3.0475, 3.0188, 2.9852, 2.9451, 2.8955, 2.8434, 2.7753, 2.697, 2.5855, null]}, {"ref": [3.528, 3.5043, 3.4939, 3.4866, 3.4813, 3.4728, 3.4656, 3.4551, 3.4464, 3.436, 3.4204, 3.4097, 3.3991, 3.3835, 3.371, 3.3576, 3.3413, 3.331, 3.3154, 3.2995, 3.2836, 3.268, 3.2524, 3.2414, 3.2258, 3.2102, 3.1946, 3.1839, 3.168, 3.1577, 3.145, 3.1311, 3.1208, 3.1104, 3.0977, 3.0872, 3.0788, 3.0632, 3.0524, 3.0418, 3.0294, 3.0159, 3.0019, 2.986, 2.9685, 2.9476, 2.9261, 2.8968, 2.8617, 2.8204, 2.7726, 2.7111, 2.6467, 2.5621, null, null], "A": [3.5314, 3.5078, 3.4973, 3.4919, 3.4867, 3.4762, 3.4709, 3.4603, 3.4499, 3.4394, 3.4236, 3.413, 3.4025, 3.3868, 3.3761, 3.3603, 3.3447, 3.3342, 3.3183, 3.3025, 3.2868, 3.271, 3.2551, 3.2446, 3.2289, 3.2131, 3.1971, 3.1868, 3.171, 3.1604, 3.1498, 3.1342, 3.1237, 3.113, 3.1025, 3.0919, 3.0815, 3.0655, 3.0552, 3.0447, 3.0341, 3.0181, 3.0065, 2.9914, 2.9709, 2.9495, 2.9289, 2.9022, 2.8655, 2.8244, 2.7761, 2.7153, 2.6477, 2.5653, null, null], "B": [3.5288, 3.5021, 3.4914, 3.4867, 3.4814, 3.4705, 3.4656, 3.4551, 3.4444, 3.4335, 3.4177, 3.4077, 3.3969, 3.3809, 3.3709, 3.3554, 3.3389, 3.3282, 3.3127, 3.297, 3.2809, 3.2651, 3.2498, 3.239, 3.223, 3.2073, 3.1923, 3.181, 3.1651, 3.1548, 3.1446, 3.1283, 3.1177, 3.1077, 3.0972, 3.0867, 3.0757, 3.0607, 3.0494, 3.0387, 3.0288, 3.0137, 3.0028, 2.9869, 2.9656, 2.9458, 2.923, 2.8973, 2.8605, 2.822, 2.7723, 2.7129, 2.648, 2.5645, null, null], "C": [3.5318, 3.5067, 3.4964, 3.4898, 3.4846, 3.476, 3.4688, 3.4583, 3.4487, 3.4383, 3.4228, 3.4125, 3.4014, 3.3858, 3.3741, 3.3601, 3.3435, 3.3335, 3.3178, 3.3019, 3.2857, 3.2702, 3.2548, 3.2443, 3.2279, 3.2124, 3.197, 3.186, 3.17, 3.1601, 3.1478, 3.1331, 3.1228, 3.1126, 3.1004, 3.0892, 3.0808, 3.0654, 3.0544, 3.0437, 3.032, 3.0187, 3.0053, 2.989, 2.9705, 2.9498, 2.9278, 2.8997, 2.8639, 2.8219, 2.7743, 2.7126, 2.6493, 2.5647, null, null]}]};
+const PX = 0.005263;
+const NAMES = ["0,56 A", "2,8 A", "10 A", "20 A", "30 A"];
+const COL = ["#c62828", "#2e7d32", "#1f4fd8", "#16181b", "#a21caf"];
+const CV = D.curves;
+const f = (v, d = 4, sign = false) => {
+  if (v == null || Number.isNaN(v)) return "–";
+  const s = Math.abs(v).toFixed(d).replace(".", ",");
+  const zero = Number(Math.abs(v).toFixed(d)) === 0;
+  return (v < 0 && !zero ? "−" : (sign && v > 0 && !zero ? "+" : "")) + s;
+};
+
+/* ---- charts ---- */
+const W = 760, H = 340, L = 64, R = 14, T = 14, B = 44;
+const X0 = 0, X1 = 2800, Y0 = -0.006, Y1 = 0.02;
+const sx = v => L + (v - X0) / (X1 - X0) * (W - L - R);
+const sy = v => T + (Y1 - v) / (Y1 - Y0) * (H - T - B);
+function marker(i, x, y, c, title) {
+  const t = title ? `<title>${title}</title>` : "";
+  if (i === 0) return `<circle cx="${x}" cy="${y}" r="2.7" fill="${c}">${t}</circle>`;
+  if (i === 1) return `<rect x="${x - 2.5}" y="${y - 2.5}" width="5" height="5" fill="${c}">${t}</rect>`;
+  if (i === 2) return `<path d="M${x} ${y - 3.3}L${x + 3.1} ${y + 2.5}L${x - 3.1} ${y + 2.5}Z" fill="${c}">${t}</path>`;
+  if (i === 3) return `<path d="M${x} ${y - 3.4}L${x + 3.1} ${y}L${x} ${y + 3.4}L${x - 3.1} ${y}Z" fill="${c}">${t}</path>`;
+  return `<path d="M${x - 3} ${y}H${x + 3}M${x} ${y - 3}V${y + 3}" stroke="${c}" stroke-width="1.6" fill="none">${t}</path>`;
+}
+function chart(id, key, ylabel) {
+  let s = "";
+  for (let y = -0.005; y <= Y1 + 1e-9; y += 0.005)
+    s += `<line class="grid" x1="${L}" x2="${W - R}" y1="${sy(y)}" y2="${sy(y)}"/><text x="${L - 7}" y="${sy(y) + 4}" text-anchor="end">${f(y, 3)}</text>`;
+  for (let x = 0; x <= X1; x += 400)
+    s += `<line class="grid" x1="${sx(x)}" x2="${sx(x)}" y1="${T}" y2="${H - B}"/><text x="${sx(x)}" y="${H - B + 16}" text-anchor="middle">${x}</text>`;
+  s += `<rect class="band" x="${L}" y="${sy(PX)}" width="${W - L - R}" height="${sy(-PX) - sy(PX)}"/>`;
+  s += `<line class="zero" x1="${L}" x2="${W - R}" y1="${sy(0)}" y2="${sy(0)}"/>`;
+  s += `<text x="${(L + W - R) / 2}" y="${H - 8}" text-anchor="middle">X, kapasite (mAh)</text>`;
+  s += `<text transform="translate(13 ${(T + H - B) / 2}) rotate(-90)" text-anchor="middle">${ylabel} (V)</text>`;
+  CV.forEach((c, i) => {
+    let d = "", pen = false, dots = "";
+    D.xs.forEach((x, k) => {
+      const a = c[key][k], o = c.ref[k];
+      if (a == null || o == null) { pen = false; return; }
+      const dv = Math.max(Y0, Math.min(Y1, a - o));
+      d += (pen ? "L" : "M") + sx(x).toFixed(1) + " " + sy(dv).toFixed(1); pen = true;
+      dots += marker(i, +sx(x).toFixed(1), +sy(dv).toFixed(1), COL[i], `${NAMES[i]}, ${x} mAh: ${f(a - o, 4, true)} V`);
+    });
+    s += `<path d="${d}" fill="none" stroke="${COL[i]}" stroke-width="1.1" stroke-linejoin="round" opacity=".75"/>${dots}`;
+  });
+  // legend inside the empty upper-left region
+  CV.forEach((c, i) => {
+    const x = L + 14 + i * 84, y = sy(0.0187);
+    s += marker(i, x, y - 4, COL[i]) + `<text x="${x + 9}" y="${y}">${NAMES[i]}</text>`;
+  });
+  s += `<rect x="${L + 10}" y="${sy(0.0158) - 8}" width="14" height="9" class="band" stroke="#c9ced3" stroke-width=".8"/><text x="${L + 30}" y="${sy(0.0158)}">±1 piksel (±0,00526 V)</text>`;
+  document.getElementById(id).innerHTML = s;
+}
+chart("chartA", "A", "Sapma Δ");
+chart("chartB", "B", "Sapma Δ");
+chart("chartC", "C", "Sapma Δ");
+
+/* ---- appendix ---- */
+document.getElementById("apx").innerHTML = CV.map((c, i) => {
+  const rows = D.xs.map((x, k) => {
+    const o = c.ref[k];
+    const d = a => (a == null || o == null) ? null : a - o;
+    return `<tr><td>${x}</td><td>${f(o)}</td><td>${f(c.A[k])}</td><td>${f(d(c.A[k]), 4, true)}</td><td>${f(c.B[k])}</td><td>${f(d(c.B[k]), 4, true)}</td><td>${f(c.C[k])}</td><td>${f(d(c.C[k]), 4, true)}</td></tr>`;
+  }).join("");
+  return `<figure class="tbl apx${i === 0 ? " first" : ""}"><figcaption><b>Tablo A${i + 1}.</b> ${NAMES[i]} eğrisi: referans (R), Koşul A, Koşul B ve Koşul C değerleri ile referanstan sapmaları (V).</figcaption><div class="scroll"><table><thead><tr><th>X (mAh)</th><th><i>y</i><sub>R</sub></th><th><i>y</i><sub>A</sub></th><th>Δ<sub>A</sub></th><th><i>y</i><sub>B</sub></th><th>Δ<sub>B</sub></th><th><i>y</i><sub>C</sub></th><th>Δ<sub>C</sub></th></tr></thead><tbody>${rows}</tbody></table></div></figure>`;
+}).join("");
+</script>
+

@@ -1,0 +1,11 @@
+# environment and build output (the packaged exe is ~150 MB: build it with `python build_exe.py`)
+.venv/
+build/
+dist/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# local scratch
+debug_overlay.png
+*.log
