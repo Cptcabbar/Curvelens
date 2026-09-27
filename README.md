@@ -1,124 +1,151 @@
 # Plot Digitizer
 
-PDF'teki grafiklerden ve **grafik görsellerinden (PNG, JPG, BMP, TIFF, WebP)** **lookup tablosu** üretir. PDF açılınca içindeki tüm grafikler otomatik bulunur; sayfaya çizilmiş
-(vektör) grafiklerin eğri değerleri PDF'in **vektör verisinden** (piksel ölçümü değil), PDF'e resim olarak yapıştırılmış
-grafiklerin değerleri eksen kalibrasyonuyla resimden okunur. Sonra bir grafik ve bir eğri seçilir; tablo görülür, X ya da
-Y yazılarak karşılığı sorgulanır, hatalı noktalar düzeltilir, CSV/PDF olarak kaydedilir ya da yazdırılır.
+**PDF belgelerindeki ve grafik görsellerindeki eğrilerin sayısal değerlere dönüştürülmesi için bir yazılım aracı**
 
-Python 3.11+, PySide6, NumPy, SciPy, pandas, pypdfium2, OpenCV (resim olarak gömülü grafikler ve eski araç için).
+## Özet
 
-## Kullanım
+Teknik belgelerde (ör. bileşen veri sayfaları) sunulan karakteristik eğriler çoğunlukla yalnızca grafik biçiminde
+yayımlanır; bu eğrilerin sayısal analizde, benzetimde ya da gömülü yazılımlarda kullanılabilmesi için tablo (lookup
+tablosu) biçimine dönüştürülmesi gerekir. Plot Digitizer, bu dönüşümü iki farklı veri kaynağı için gerçekleştirir:
+(i) PDF sayfasına vektör olarak çizilmiş grafiklerde eğri değerleri, piksel ölçümüne başvurulmadan doğrudan PDF'in vektör
+geometrisinden elde edilir; (ii) PDF'e raster görüntü olarak gömülmüş grafiklerde ve bağımsız görsel dosyalarında (PNG,
+JPG, BMP, TIFF, WebP) değerler, kullanıcı tarafından yapılan eksen kalibrasyonu ve renk tabanlı eğri ayrıştırması ile
+okunur. Her iki yöntemde de her değer, kaynağın çözünürlüğünden türetilen bir belirsizlikle (±) birlikte raporlanır.
+Elde edilen tablolar üzerinde X→Y ve Y→X sorgusu, elle düzeltme, harici tablolarla karşılaştırma ve CSV/PDF çıktısı
+alınabilir.
 
-1. **PDF ya da görsel aç** (`Ctrl+O` ya da sürükle-bırak). PDF'in tüm sayfalarındaki grafikler taranır (~1 sn/sayfa); bir
-   görsel dosyası tek grafik olarak açılır (aşağıda "Resim olarak gömülü grafikler ve görsel dosyaları").
-2. **Galeri**: her grafik görseli ve adıyla gelir; birine tıklayın.
-3. **Detay**: solda grafik, sağda **eğriler ve anlamları** (legend metni + hangi eksene ait + çizgi türü) ve grafik
-   notları. Bir eğri seçince (seçili eğri grafikte sarı ile işaretlenir) altında **lookup tablosu** oluşur.
-   Fare grafiğin üstündeyken durum çubuğu X, Y değerini ve seçili eğrinin o X'teki değerini gösterir.
-4. **X adımı**: otomatik yuvarlak bir adım (≈50 satır); değiştirilebilir, `0` = eğrinin kendi noktaları. **Grafikteki
-   noktalar lookup tablosunun satırlarıdır**: adımı değiştirince grafikteki nokta sayısı ve değerleri de tabloyla birlikte
-   değişir (grafiğin altında "Grafikte N nokta işaretli" yazar). Tabloda bir satır seçince o nokta grafikte turuncu halkayla
-   gösterilir. Düzelt araçlarından biri seçiliyken (tutup taşınacak noktalar için) eğrinin ham noktaları gösterilir; `Esc` ile
-   tablo noktalarına dönülür.
-5. **Değer sorgula** (tablonun altında): `X = …` yazın, eğrinin Y'sini; `Y = …` yazın, eğrinin X'ini görün (eğri aynı Y'yi
-   birkaç kez alıyorsa hepsi listelenir). Ondalık için virgül ya da nokta. Karşılık, grafikte artı işaretiyle gösterilir;
-   `±` değer, noktaların belirsizliğinden ve eğimden hesaplanır. Eğrinin X/Y aralığı dışında değer üretilmez.
-6. **Düzelt** (grafiğin altında): yanlış okunan yeri düzeltmek için **Nokta ekle**, **Nokta sil**, **Kutuyla sil**,
-   **Nokta taşı** (bir noktayı tutup sürükleyin); `Ctrl+Z` / `Ctrl+Y` geri al/yinele, **Özgün hale döndür** hepsini
-   siler. Düzeltilen eğri listede "düzeltildi (N)" yazar; tablo, sorgu, CSV, PDF ve yazdırma düzeltilmiş veriyi kullanır ve
-   çıktıda "eğri elle düzeltildi" notu bulunur. Elle eklenen noktanın belirsizliği, tıklamanın piksel çözünürlüğüdür.
-7. **CSV**, **PDF kaydet…**, **Yazdır…** (sistem yazdırma penceresi; "Microsoft Print to PDF" da seçilebilir).
+**Bağımlılıklar:** Python 3.11+, PySide6, NumPy, SciPy, pandas, pypdfium2, OpenCV (raster grafikler ve elle
+sayısallaştırma aracı için).
 
-Değerler arasında doğrusal interpolasyon yapılır (kesikli çizgilerde dash boşlukları dahil); eğrinin X aralığı
-dışında değer üretilmez. Belirsizlik, PDF'in kendi koordinat çözünürlüğüdür (bu datasheet'te ±0,06 pt →
-≈ ±1,2 mAh, ±0,0026 V) ve tablo başlığında yazılır.
+## 1. Yöntem
 
-### Tablo karşılaştırma sekmesi (lookup tablosunu içe aktarma)
+### 1.1 Vektör grafiklerden değer çıkarımı
 
-Üstteki **Tablo karşılaştırma** sekmesi (ya da `Dosya → Tablo içe aktar…`, `Ctrl+I`) bir lookup tablosunu içe aktarıp
-noktalarını grafik üzerinde gözlemlemek içindir. Tablo CSV/TXT/TSV olabilir: bu programın CSV çıktısı, Excel'den
-kaydedilmiş `;`/tab ayraçlı dosyalar, ondalık virgül ya da nokta, başlıklı ya da başlıksız, birden çok Y sütunu.
+1. **Grafik bölgesinin tespiti.** Grafik çerçevesi, dört ince kenar çizgisinden oluşan dikdörtgen olarak aranır; başlık,
+   eksen adları ve tick etiketleri PDF'in metin katmanından çözümlenir.
+2. **Eksen kalibrasyonu.** Sayfa koordinatları ile veri değerleri arasındaki dönüşüm, yalnızca iki referans noktası
+   yerine **tüm tick etiketleri** kullanılarak en küçük kareler yöntemiyle kestirilir (doğrusal ya da log₁₀ ölçek).
+3. **Eğri ayrıştırması.** Çizim yolları geometrik özelliklerine göre sınıflandırılır: uç uca bitişen parçalar sürekli
+   eğri, düzenli aralıklı kısa parçalar kesikli eğri, küçük kapalı şekiller işaretçi serisi olarak yorumlanır. Izgara,
+   çerçeve, tick ve legend çizgileri ayıklanır. Vektör verisi örtülen bölgelerde de mevcut olduğundan, başka bir eğrinin
+   altında kalan kesimler de eksiksiz okunur.
+4. **Anlamlandırma.** Her eğri; legend işareti ve bitişiğindeki metinle, legend bulunmadığında eksen rengi (ör. mavi eksen
+   → mavi eğri) ya da çizgi türüyle eşleştirilir. Çok Y eksenli grafiklerde eğri, rengi eşleşen eksenin ölçeğinde okunur.
 
-1. **Tabloyu seçince eşleştirme istenir:** açık PDF/görselden hangi grafik ve hangi eğriyle eşleşeceğini seçersiniz. Tablonun
-   noktaları o grafiğin üstüne (magenta noktalar) çizilir ve eğriyle karşılaştırılır: kaç nokta eğrinin X aralığında,
-   tablo − eğri farkı (ortalama, ortalama mutlak, RMS, en büyük ve bağıl %), eğrinin belirsizliği; sağdaki tabloda her satır için
-   eğri değeri, fark ve fark %. Birim uyuşmazlığı (ör. mAh ↔ Ah) uyarı olarak yazılır.
-2. **Eşleştirme vermezseniz** ("Eşleştirme yapma" seçeneği) ya da açık grafik yoksa tablodan **yeni bir grafik** çizilir
-   (eksenler, ızgara, çizgi, noktalar; birden çok Y sütunu varsa hepsi, legend'lı). Bir satırı seçince o nokta halkayla gösterilir.
-3. Grafikte tablodaki **tüm satırlar** işaretlidir (grafik alanı dışında kalanlar sayılıp yazılır). Çok sütunlu tabloda
-   "Y sütunu" ile karşılaştırılacak sütun seçilir. **Eşleştir…** eşleşmeyi değiştirir; eşleşen eğri "Grafik okuma"
-   sekmesinde düzeltilirse karşılaştırma sekmeye dönünce yenilenir. **Grafiği PNG kaydet…** ve **Karşılaştırmayı CSV kaydet…**
-   sonucu dışarı verir.
+### 1.2 Raster grafiklerden değer çıkarımı
 
-### Resim olarak gömülü grafikler ve görsel dosyaları (ör. Aspilsan datasheet'i, ekran görüntüsü, tarama)
+Görüntü olarak gömülmüş grafikler galeride "görsel grafik · kalibrasyon gerekli" olarak listelenir (ad, görüntünün
+üzerindeki PDF metninden alınır). Bağımsız görsel dosyaları aynı iş akışıyla tek grafik olarak açılır.
 
-Bazı datasheet'lerde grafik çizim değil, PDF'e yapıştırılmış bir resimdir (PNG/JPG). Böyle grafikler de galeride
-görünür ("görsel grafik · kalibrasyon gerekli"; adı resmin üstündeki PDF metninden alınır). **PNG, JPG, BMP, TIFF ve WebP
-dosyaları da aynı yoldan** açılır: dosya tek grafik olarak gelir (adı dosya adıdır), çıktılarda sayfa numarası yazmaz.
-Çerçeve otomatik aranır; bulunamazsa (çerçevesiz grafik ya da çok gürültülü resim) **Grafik alanı…** ile eksenlerin oluşturduğu
-dikdörtgeni çizersiniz (bu alan da kalibrasyonla birlikte hatırlanır). Sonrası aşağıdaki adımlarla aynıdır:
+1. **Grafik alanı.** Çerçeve otomatik olarak aranır; bulunamadığında (çerçevesiz grafik ya da yüksek gürültü) eksenlerin
+   sınırladığı dikdörtgen kullanıcı tarafından **Grafik alanı…** ile tanımlanır.
+2. **Kalibrasyon.** Kullanıcı X ve Y eksenlerinin her birinde iki tick işaretine tıklar; tıklama konumu en yakın tick
+   çizgisine ya da ızgara çizgisine hizalanır, çerçeve kenarları da aday olarak önerilir. İkinci bir Y ekseni varsa iki
+   işaret daha seçilir. İşaretlerin sayısal değerleri ve eksen adları elle girilir (birim parantez içinde yazıldığında,
+   ör. `Gerilim (V)`, tablo başlığına aktarılır); logaritmik eksenler ayrıca belirtilir. Metin tanıma (OCR) kullanılmaz.
+3. **Eğri ayrıştırması.** Eğriler renk bileşenlerine göre otomatik olarak ayrılır; aynı renkteki iki eğri (ör. gerilim ve
+   sıcaklık) ayrı ayrı bulunur ve sağ eksen renginde başlığı olan eğriler sağ eksene atanır. Legend görüntü içinde
+   olduğundan eğriler `Eğri N (renk)` olarak adlandırılır ve **Adı…** (`F2`) ile yeniden adlandırılabilir. Eksik ya da
+   siyah/gri eğriler **＋ Eğri ekle** ile (kesikli çizgiler için "Kesikli" seçeneğiyle) tohum noktasından izlenir; hatalı
+   eğriler **Eğriyi sil** ile kaldırılır, yanlış eksene atananlar **Eksen ⇄** ile düzeltilir.
+4. **Kalibrasyonun kalıcılığı.** Tamamlanan kalibrasyon, PDF'in dosya içeriğinden hesaplanan özet değeriyle
+   ilişkilendirilerek saklanır; bu sayede dosyanın taşınması ya da yeniden adlandırılması kaydı etkilemez, içeriği
+   değişmiş bir dosya ise yeniden kalibrasyon gerektirir. Kayıt yalnızca kalibrasyonu (ve varsa elle tanımlanan grafik
+   alanını) içerir; eğri adları ve elle düzeltmeler oturumla sınırlıdır. Kayıt dosyası
+   `%APPDATA%\PlotDigitizer\calibrations.json` konumundadır ve `PLOT_DIGITIZER_DATA` ortam değişkeniyle değiştirilebilir.
+   Kalibrasyon **Yeniden kalibre et** ile güncellenir, `Araçlar → Bu grafiğin kayıtlı kalibrasyonunu sil` ile silinir.
+   Vektör grafikler kalibrasyon gerektirmez.
 
-1. Grafiği açın, **Kalibre et**'e basın; X ekseninde iki, Y ekseninde iki işarete (tick) tıklayın. Tıklama yakındaki tick
-   çizgisine ya da ızgaraya yapışır; grafik çerçevesinin kenarları da önerilir. Sağda ikinci bir Y ekseni varsa "evet"
-   deyip iki işaret daha gösterin.
-2. Açılan pencereye işaretlerin değerlerini ve eksen adlarını yazın (birimi parantez içinde yazarsanız tablo başlığında
-   görünür: `Gerilim (V)`); logaritmik eksen için kutuyu işaretleyin. Metin okuma (OCR) yoktur, değerleri siz verirsiniz.
-3. Eğriler renklerinden **otomatik** bulunur (aynı renkte iki eğri, örn. gerilim ve sıcaklık, ayrı bulunur; sağ eksen renginde
-   yazılmış eksen başlığı olan eğriler sağ eksene atanır). Legend resim olduğu için adlar `Eğri N (renk)` gelir:
-   **Adı…** (`F2`) ile değiştirin. Eksik ya da siyah/gri eğri için **＋ Eğri ekle** ile eğrinin üstüne tıklayın
-   (kesikli çizgiyse "Kesikli"yi işaretleyin); fazla eğri için **Eğriyi sil**; yanlış eksene atananı **Eksen ⇄** çevirir.
-4. Sonrası vektör grafiklerle aynıdır: tablo, değer sorgula, düzelt, CSV/PDF/yazdır.
-5. **Kalibrasyon hatırlanır:** kalibrasyonu bitirince kendiliğinden kaydedilir; aynı PDF'i (ya da adı değişmiş bir kopyasını)
-   bir daha açtığınızda o grafik **sorulmadan** kalibre gelir ve eğrileri okunur (galeride "kalibrasyon kayıtlı" yazar).
-   PDF, dosya içeriğinin özetiyle tanınır: taşımak ya da yeniden adlandırmak sorun olmaz; içeriği değişen (başka) bir
-   PDF için yeniden sorulur. Değiştirmek için **Yeniden kalibre et** (eskisinin yerine yazılır); silmek için
-   `Araçlar → Bu grafiğin kayıtlı kalibrasyonunu sil`. Kayıt yalnızca kalibrasyonu içerir; eğri adları ve elle
-   düzeltmeler oturumla sınırlıdır. Dosya: `%APPDATA%\PlotDigitizer\calibrations.json` (`PLOT_DIGITIZER_DATA`
-   ortam değişkeniyle başka klasöre alınabilir; silmek her şeyi unutturur). Vektör grafikler kalibrasyon gerektirmez.
+### 1.3 Tablo üretimi, interpolasyon ve belirsizlik
 
-Doğruluk resmin piksel çözünürlüğüyle sınırlıdır (tablo altında ± olarak yazar; Aspilsan grafiklerinde ≈ ±2 mAh, ±0,004 V).
-JPEG sıkıştırması çizgi kenarlarını bulanıklaştırır ama beş eğrilik deneme grafiğinde (600 DPI PNG) bir pikselin altında
-kalır: PDF'in vektör değerlerine göre ortalama sapma +0,003 V, en büyük 0,0044 V.
-Şarj grafiğinde datasheet'in kendi değerleri okunur: 1400 mA şarj akımı, 4,2 V bitiş gerilimi, 140 mA kesme akımı, ≈2830 mAh.
+* **Örnekleme.** X adımı varsayılan olarak yaklaşık 50 satır verecek biçimde yuvarlak bir değere ayarlanır; kullanıcı
+  tarafından değiştirilebilir (`0`: eğrinin özgün noktaları). Grafikte işaretlenen noktalar tablonun satırlarıyla
+  birebir örtüşür.
+* **İnterpolasyon.** Ardışık noktalar arasında doğrusal interpolasyon uygulanır (kesikli çizgilerde boşluklar dahil).
+  Eğrinin tanım aralığı dışında ekstrapolasyon yapılmaz.
+* **Nokta belirsizliği.** Vektör grafiklerde belirsizlik, PDF'in koordinat çözünürlüğüdür; raster grafiklerde ise
+  görüntünün piksel çözünürlüğüdür. Elle eklenen noktaların belirsizliği tıklamanın piksel çözünürlüğüne eşittir.
+* **Sorgu belirsizliği.** Değer sorgusunda nokta belirsizlikleri (σₓ, σᵧ), eğrinin yerel eğimi *m* ile birleştirilir;
+  *m*, sorgu noktası çevresindeki komşu noktalara en küçük kareler doğrusu uydurularak kestirilir:
 
-### Nasıl okunuyor?
+  $$\sigma_Y = \sqrt{\sigma_y^2 + (m\,\sigma_x)^2}, \qquad \sigma_X = \sqrt{\sigma_x^2 + (\sigma_y / |m|)^2}$$
 
-* Grafik çerçevesi, başlığı, eksen adları ve tick etiketleri PDF'ten bulunur; eksen kalibrasyonu tüm tick'lere
-  en küçük kareler uyumuyla yapılır (lineer ya da log10).
-* Eğriler: uç uca değen parçalar → sürekli eğri, aralıklı kısa parçalar → kesikli eğri, küçük kapalı şekiller →
-  işaretçi serisi. Izgara, çerçeve, tick ve legend çizgileri ayıklanır. Başka eğrinin altında kalan bölümler de
-  (vektör verisi orada durduğu için) tam okunur.
-* Anlam: legend işareti + yanındaki metin; legend yoksa eksen rengi (mavi eksen → mavi eğri) ya da çizgi türü.
-  Çok Y eksenli grafiklerde eğri renginin eksen rengiyle eşleşmesine göre doğru eksenden okunur.
+  Dolayısıyla eğimin yüksek olduğu bölgelerde Y belirsizliği, eğrinin yataya yakın olduğu bölgelerde X belirsizliği
+  büyür; eğimin sıfıra yaklaştığı durumlarda X değeri belirsiz (∞) olarak raporlanır. Eğri aynı Y değerini birden fazla
+  kez aldığında tüm çözümler listelenir.
 
-### Sınırlar
+## 2. Doğrulama
 
-* Otomatik bulunan grafikler: sayfaya çizilmiş (vektör) grafikler, **içinde çerçeveli bir grafik bulunan resimler** ve
-  görsel dosyaları (PNG/JPG/BMP/TIFF/WebP). Tam sayfa taranmış PDF'lerde (sayfanın tamamı bir resim, içinde birkaç grafik)
-  `Araçlar → Görselden elle sayısallaştır (gelişmiş)` (eski, her şeyi elle yapılan araç; `python app.py --manual resim.png`)
-  ya da sayfayı görsel olarak kaydedip açmak gerekir.
-* Resim grafiklerde: eksen değerleri elle girilir (OCR yok); ikinci Y ekseni desteklenir ama üçüncüsü yoktur; kesikli, siyah
-  ve gri eğrilerle çakışan eğriler için `＋ Eğri ekle` gerekebilir; başka eğrinin altında kalan bölümü resimde göremeyiz
-  (vektör grafiklerden farklı olarak); eğrilerin eksenle kesiştiği ilk birkaç piksel kalın çerçeve yüzünden okunmayabilir.
-* Grafik tespiti çerçeveyi dört ince kenar çizgisinden bulur; çerçevesiz grafikler bulunamaz. Log eksenlerde
-  `10^n` biçiminde (mathtext) tick etiketleri okunamaz, düz sayı etiketleri (1, 10, 100) okunur.
-* Aynı renk + aynı çizgi türünde iki ayrı eğri tek eğri olarak birleşir.
+* **Birim ve entegrasyon testleri**, matplotlib ile üretilmiş ve doğru değerleri önceden bilinen PDF grafikleri üzerinde
+  çalıştırılır (`tests/`).
+* **Vektör çıkarımı.** Örnek veri sayfasında koordinat çözünürlüğü ±0,06 pt olup bu değer yaklaşık ±1,2 mAh ve
+  ±0,0026 V belirsizliğe karşılık gelir.
+* **Raster çıkarımı.** Beş eğri içeren ve 600 DPI PNG olarak dışa aktarılmış bir deneme grafiğinde, raster yöntemle
+  okunan değerlerin aynı grafiğin vektör değerlerinden sapması ortalama +0,003 V, en fazla 0,0044 V olarak ölçülmüştür;
+  bu sapma bir pikselin altındadır. JPEG sıkıştırmasının çizgi kenarlarında yol açtığı bulanıklaşma bu sınırı aşmamıştır.
+  Görüntü olarak gömülü grafik içeren bir veri sayfasında tipik belirsizlik ≈ ±2 mAh ve ±0,004 V düzeyindedir.
+* **Referans değerlerle tutarlılık.** Şarj eğrisinden okunan değerler (1400 mA şarj akımı, 4,2 V şarj sonu gerilimi,
+  140 mA kesme akımı, ≈2830 mAh) veri sayfasında beyan edilen değerlerle uyumludur.
 
-## Kurulum, çalıştırma, test
+## 3. Kullanım
+
+1. **Dosya açma** (`Ctrl+O` ya da sürükle-bırak). PDF'in tüm sayfaları grafik için taranır (≈1 s/sayfa); görsel dosyaları
+   tek grafik olarak açılır.
+2. **Galeri.** Bulunan grafikler önizleme ve adlarıyla listelenir.
+3. **Detay görünümü.** Grafik, eğri listesi (legend metni, ilişkili eksen, çizgi türü) ve grafik notları birlikte
+   gösterilir. Seçilen eğri vurgulanır ve lookup tablosu oluşturulur; imleç konumundaki X, Y değerleri ile seçili eğrinin
+   o X'teki değeri durum çubuğunda görüntülenir.
+4. **Değer sorgusu.** `X = …` girdisi eğrinin Y değerini, `Y = …` girdisi X değer(ler)ini belirsizliğiyle birlikte
+   döndürür; sonuç grafikte işaretlenir. Ondalık ayırıcı olarak virgül ya da nokta kabul edilir.
+5. **Elle düzeltme.** Hatalı okunan bölgeler **Nokta ekle**, **Nokta sil**, **Kutuyla sil** ve **Nokta taşı** araçlarıyla
+   düzeltilir (`Ctrl+Z` / `Ctrl+Y`; **Özgün hale döndür** tüm düzeltmeleri geri alır). Düzeltilmiş eğriler listede
+   "düzeltildi (N)" olarak işaretlenir; tüm çıktılar düzeltilmiş veriyi kullanır ve bu durumu not olarak belirtir.
+6. **Çıktı.** Tablo CSV ya da PDF olarak kaydedilir veya sistem yazdırma penceresi üzerinden yazdırılır.
+
+### 3.1 Harici tablolarla karşılaştırma
+
+**Tablo karşılaştırma** sekmesi (`Dosya → Tablo içe aktar…`, `Ctrl+I`), mevcut bir lookup tablosunun bir grafik eğrisiyle
+nicel olarak karşılaştırılmasını sağlar. CSV/TXT/TSV biçimleri; `;` ya da sekme ayraçlı dosyalar, virgül ya da nokta
+ondalık ayırıcısı, başlıklı ya da başlıksız ve çok sütunlu tablolar desteklenir.
+
+* **Eşleştirmeli karşılaştırma.** Tablo bir grafik ve eğriyle eşleştirildiğinde noktalar grafik üzerine çizilir ve
+  şu istatistikler hesaplanır: eğrinin X aralığındaki nokta sayısı; tablo − eğri farkının ortalaması, ortalama mutlak
+  değeri, RMS değeri, en büyük değeri ve bağıl yüzdesi; eğrinin belirsizliği. Satır bazında eğri değeri, fark ve bağıl
+  fark ayrıca listelenir. Birim uyuşmazlıkları (ör. mAh ↔ Ah) uyarı olarak bildirilir.
+* **Eşleştirmesiz görselleştirme.** Eşleştirme yapılmadığında tablodan eksenleri, ızgarası ve legend'ı olan yeni bir
+  grafik çizilir.
+* Grafik alanı dışında kalan satırlar sayılarak raporlanır. Eşleşen eğri düzeltildiğinde karşılaştırma otomatik olarak
+  yenilenir. Sonuçlar PNG (grafik) ve CSV (karşılaştırma) olarak dışa aktarılabilir.
+
+## 4. Sınırlamalar
+
+* Otomatik tespit; vektör grafikleri, çerçeveli bir grafik içeren gömülü görüntüleri ve görsel dosyalarını kapsar.
+  Sayfanın tamamının tek bir görüntü olduğu taranmış PDF'lerde sayfa görsel olarak kaydedilip açılmalı ya da
+  `Araçlar → Görselden elle sayısallaştır (gelişmiş)` aracı (`python app.py --manual resim.png`) kullanılmalıdır.
+* Grafik tespiti çerçeve kenarlarına dayandığından çerçevesiz vektör grafikler otomatik olarak bulunamaz.
+* Log eksenlerde `10^n` biçimli (mathtext) tick etiketleri çözümlenemez; düz sayısal etiketler (1, 10, 100) desteklenir.
+* Aynı renk ve çizgi türüne sahip iki ayrı eğri tek eğri olarak birleştirilir.
+* Raster grafiklerde: eksen değerleri elle girilir (OCR yoktur); en fazla iki Y ekseni desteklenir; kesikli, siyah ya da
+  gri eğrilerle çakışan eğriler için elle ekleme gerekebilir; başka bir eğrinin örttüğü kesimler görüntüde bulunmadığından
+  okunamaz; kalın çerçeve nedeniyle eğrilerin eksenle kesiştiği ilk birkaç piksel okunamayabilir.
+* Doğruluk, raster grafiklerde görüntünün piksel çözünürlüğüyle, vektör grafiklerde PDF'in koordinat hassasiyetiyle
+  sınırlıdır.
+
+## 5. Kurulum, çalıştırma ve test
 
 ```powershell
 py -m venv .venv
 .\.venv\Scripts\python -m pip install -r requirements.txt
-.\.venv\Scripts\python app.py                                  # arayüz
+.\.venv\Scripts\python app.py                                  # grafik arayüz
 .\.venv\Scripts\python app.py samples\INR18650P28A-V1-80093.pdf
 .\.venv\Scripts\python -m pytest                               # testler
 .\.venv\Scripts\python app.py --selftest samples\INR18650P28A-V1-80093.pdf   # kütüphane/paket denetimi
 ```
 
-Tek dosya `.exe`: `python build_exe.py` → `dist\PlotDigitizer.exe` (ilk açılış birkaç sn sürer).
-`--screenshot out.png dosya.pdf --page gallery|detail --chart N --curve M` pencerenin görüntüsünü kaydeder.
+Tek dosyalık çalıştırılabilir: `python build_exe.py` → `dist\PlotDigitizer.exe` (ilk açılış birkaç saniye sürer).
+`--screenshot out.png dosya.pdf --page gallery|detail --chart N --curve M` pencere görüntüsünü dosyaya kaydeder.
 
-## Yapı
+## 6. Yazılım mimarisi
 
 ```
 app.py                     giriş noktası (+ --selftest / --screenshot / --manual)
@@ -128,22 +155,23 @@ core/
   lookup.py                X→Y tablosu, interpolasyon, ondalık basamak, HTML raporu, CSV
   query.py                 X→Y ve Y→X değer sorgusu (interpolasyon, çoklu çözüm, belirsizlik)
   curve_edit.py            elle düzeltme: nokta ekle/sil/taşı, geri al/yinele (GUI'siz)
-  calibration_store.py     resim grafiklerin kalibrasyonunu PDF içeriğine göre hatırlar (JSON)
-  raster_charts.py         PDF'e resim olarak gömülü grafikler: bulma, tick tespiti, kalibrasyon, otomatik eğri okuma
-  table_import.py          lookup tablosu dosyası okuma (CSV/TXT, ayraç/ondalık tahmini) + eğriyle karşılaştırma
+  calibration_store.py     raster grafik kalibrasyonlarının içerik özetine göre saklanması (JSON)
+  raster_charts.py         gömülü görüntü grafikleri: tespit, tick bulma, kalibrasyon, otomatik eğri okuma
+  table_import.py          lookup tablosu okuma (CSV/TXT, ayraç/ondalık tahmini) + eğriyle karşılaştırma
   postprocess.py, calibration.py, models.py
-  extraction.py, project.py, plotarea.py, export.py, imageio.py    eski görselden sayısallaştırma
+  extraction.py, project.py, plotarea.py, export.py, imageio.py    görselden elle sayısallaştırma (eski araç)
 ui/
-  lookup_window.py         ana pencere: hoş geldin → galeri → detay (düzeltme araçları, resim grafik kalibrasyonu)
-  query_panel.py           "Değer sorgula" kutusu
-  compare_tab.py           "Tablo karşılaştırma" sekmesi: içe aktarma, eşleştirme penceresi, grafik üstünde gözlem
+  lookup_window.py         ana pencere: karşılama → galeri → detay (düzeltme, raster kalibrasyonu)
+  query_panel.py           "Değer sorgula" paneli
+  compare_tab.py           "Tablo karşılaştırma" sekmesi: içe aktarma, eşleştirme, grafik üzerinde gösterim
   plot_canvas.py           tablodan yeni grafik çizimi (eşleştirme yoksa)
-  calibration_dialog.py    resim grafikte tıklanan işaretlerin değerleri
-  printing.py              tabloyu PDF'e çevirir / yazıcıya gönderir (QTextDocument + QPrinter)
+  calibration_dialog.py    raster kalibrasyonda seçilen işaretlerin değer girişi
+  printing.py              tablonun PDF'e dönüştürülmesi / yazdırılması (QTextDocument + QPrinter)
   image_view.py, table_model.py, appicon.py
-  main_window.py, pdf_dialog.py                                    eski elle araç
-tests/                     birim + entegrasyon + arayüz; matplotlib ile doğru cevabı bilinen PDF'ler
-samples/                   INR18650P28A-V1-80093.pdf (datasheet), discharge.png
+  main_window.py, pdf_dialog.py                                    elle sayısallaştırma arayüzü (eski araç)
+tests/                     birim, entegrasyon ve arayüz testleri; doğru değerleri bilinen matplotlib PDF'leri
+samples/                   INR18650P28A-V1-80093.pdf (örnek veri sayfası), discharge.png
 ```
 
-Tüm koordinatlar PDF noktası (pt) cinsindendir, sayfanın sol-üst köşesinden ölçülür (y aşağı).
+**Koordinat sistemi:** Tüm iç koordinatlar PDF noktası (pt) birimindedir; orijin sayfanın sol üst köşesidir ve y ekseni
+aşağı doğru artar.
