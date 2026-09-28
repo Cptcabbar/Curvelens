@@ -41,7 +41,8 @@ Görüntü olarak gömülmüş grafikler galeride "görsel grafik · kalibrasyon
    sınırladığı dikdörtgen kullanıcı tarafından **Grafik alanı…** ile tanımlanır.
 2. **Kalibrasyon.** Kullanıcı X ve Y eksenlerinin her birinde iki tick işaretine tıklar; tıklama konumu en yakın tick
    çizgisine ya da ızgara çizgisine hizalanır, çerçeve kenarları da aday olarak önerilir. İkinci bir Y ekseni varsa iki
-   işaret daha seçilir. İşaretlerin sayısal değerleri ve eksen adları elle girilir (birim parantez içinde yazıldığında,
+   işaret daha seçilir. Sol fare tuşu işaret seçer; sağ (ya da orta) tuşla sürüklemek görüntüyü kaydırır,
+   tekerlek yakınlaştırır (bu davranış tıklamalı tüm araçlar için geçerlidir). İşaretlerin sayısal değerleri ve eksen adları elle girilir (birim parantez içinde yazıldığında,
    ör. `Gerilim (V)`, tablo başlığına aktarılır); logaritmik eksenler ayrıca belirtilir. Metin tanıma (OCR) kullanılmaz.
 3. **Eğri ayrıştırması.** Eğriler renk bileşenlerine göre otomatik olarak ayrılır; aynı renkteki iki eğri (ör. gerilim ve
    sıcaklık) ayrı ayrı bulunur ve sağ eksen renginde başlığı olan eğriler sağ eksene atanır. Legend görüntü içinde

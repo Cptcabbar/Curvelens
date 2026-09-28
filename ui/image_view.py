@@ -329,7 +329,10 @@ class ImageView(QGraphicsView):
         pos = event.position()
         self._press_pos = pos
         left = event.button() == Qt.MouseButton.LeftButton
-        if event.button() == Qt.MouseButton.MiddleButton or (left and (self._tool == Tool.PAN or self._space)):
+        # right or middle button drags the picture in every tool (so a click tool - calibration, adding a point -
+        # keeps the left button for clicking and the right one for moving around)
+        if event.button() in (Qt.MouseButton.MiddleButton, Qt.MouseButton.RightButton) \
+                or (left and (self._tool == Tool.PAN or self._space)):
             self._panning = True
             self._last_pos = pos
             self._update_cursor()

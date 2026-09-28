@@ -47,7 +47,7 @@ EDIT_TOOLS = (
     (Tool.ERASE, "Kutuyla sil", "Silinecek noktaların çevresine bir kutu çizin"),
     (Tool.MOVE_POINT, "Nokta taşı", "Bir noktayı tutup doğru yerine sürükleyin (boş yerde sürüklemek görüntüyü kaydırır)"),
 )
-PAN_HINT = "Tekerlek: yakınlaştır · sürükle: kaydır · seçili eğri görselde noktalarla işaretlenir"
+PAN_HINT = "Tekerlek: yakınlaştır · sürükle (ya da sağ tuşla sürükle): kaydır · seçili eğri görselde noktalarla işaretlenir"
 
 
 def color_icon(rgb: tuple[int, int, int], dashed: bool = False, size: int = 18) -> QIcon:
@@ -901,8 +901,8 @@ class LookupWindow(QMainWindow):
                  ("y", "Y ekseninde 1. işarete tıklayın", "Y1"), ("y", "Y ekseninde 2. işarete tıklayın", "Y2")]
         self._cal = {"steps": steps, "clicks": [], "asked": False}
         self.view.set_calibration_markers([])
-        self._set_edit_tool(Tool.CALIB, "Eksen üzerindeki işaretlere (tick) tıklayın; tıklama yakındaki işarete yapışır")
-        self.statusBar().showMessage(steps[0][1] + " (birbirinden uzak iki işaret seçin).")
+        self._set_edit_tool(Tool.CALIB, "Sol tuş: eksen üzerindeki işarete (tick) tıkla, yakındaki işarete yapışır · sağ tuşla sürükle: görüntüyü kaydır · tekerlek: yakınlaştır")
+        self.statusBar().showMessage(steps[0][1] + " (birbirinden uzak iki işaret seçin; sağ tuşla sürükleyerek kaydırabilirsiniz).")
 
     def _cancel_calibration(self) -> None:
         self._cal = None

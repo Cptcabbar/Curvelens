@@ -172,7 +172,7 @@ class CompareTab(QWidget):
         ll = QVBoxLayout(left)
         ll.setContentsMargins(0, 0, 0, 0)
         self.view = ImageView()
-        self.hint = QLabel("Tekerlek: yakınlaştır · sürükle: kaydır · tabloda bir satır seçince o nokta grafikte halkayla gösterilir")
+        self.hint = QLabel("Tekerlek: yakınlaştır · sürükle (ya da sağ tuşla sürükle): kaydır · tabloda bir satır seçince o nokta grafikte halkayla gösterilir")
         self.hint.setStyleSheet("color: gray;")
         ll.addWidget(self.view, 1)
         ll.addWidget(self.hint)
