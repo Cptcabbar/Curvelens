@@ -15,8 +15,8 @@ için `README.md` dosyasına bakın.
 
 | Yöntem | Nasıl |
 |---|---|
-| **Hazır exe** (kurulum gerektirmez) | GitHub'daki *Releases* bölümünden `Curvelens.exe` dosyasını indirip çift tıklayın. İlk açılış birkaç saniye sürer. |
-| **Kaynak koddan** (Windows) | `run.bat` dosyasına çift tıklayın. İlk çalıştırmada Python sanal ortamı ve kütüphaneler otomatik indirilir (internet gerekir), sonraki açılışlar doğrudan başlar. |
+| **Hazır exe** (kurulum gerektirmez) | Teslim paketindeki `Curvelens.exe` dosyasına çift tıklayın (GitHub'daki *Releases* bölümünden de indirilebilir). Python ya da kütüphane kurmak gerekmez. İlk açılış birkaç saniye sürer. |
+| **Kaynak koddan** (Windows) | `run.bat` dosyasına çift tıklayın. İlk çalıştırmada Python sanal ortamı ve gereken tüm kütüphaneler otomatik indirilir (internet gerekir), sonraki açılışlar doğrudan başlar. |
 | **Elle** | `python -m venv .venv`, ardından `.venv\Scripts\python -m pip install -r requirements-run.txt`, ardından `.venv\Scripts\python app.py` |
 
 Gereksinim: Windows 10/11 (64 bit). Kaynak koddan çalıştırmak için Python 3.11 veya daha yenisi.
