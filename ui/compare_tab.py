@@ -242,7 +242,7 @@ class CompareTab(QWidget):
         try:
             table = read_table(path)
         except ValueError as exc:
-            QMessageBox.critical(self, "Plot Digitizer", f"Tablo açılamadı:\n{exc}")
+            QMessageBox.critical(self, "Curvelens", f"Tablo açılamadı:\n{exc}")
             return False
         charts = self._usable_charts()
         if charts and any(c.kind == "vector" or c.calibrated for c in charts):

@@ -36,7 +36,7 @@ from ui.image_view import ImageView, Tool, ndarray_to_pixmap
 from ui.query_panel import QueryPanel
 from ui.table_model import ArrayTableModel, fmt
 
-APP_NAME = "Plot Digitizer"
+APP_NAME = "Curvelens"
 DETAIL_DPI = 400.0
 THUMB_WIDTH = 320
 

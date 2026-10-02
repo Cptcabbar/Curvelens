@@ -22,7 +22,7 @@ from ui.image_view import ImageView, Tool
 from ui.pdf_dialog import PdfChartDialog
 from ui.table_model import ArrayTableModel, fmt
 
-APP_NAME = "Plot Digitizer"
+APP_NAME = "Curvelens"
 
 TOOL_HINTS = {
     Tool.PAN: "Kaydırmak için sürükleyin, yakınlaştırmak için fare tekerleğini kullanın.",
@@ -432,7 +432,7 @@ class MainWindow(QMainWindow):
     def open_file(self, path: str | None = None) -> None:
         if not path:
             exts = " ".join(f"*{e}" for e in IMAGE_SUFFIXES)
-            settings = QSettings("PlotDigitizer", "PlotDigitizer")
+            settings = QSettings("Curvelens", "Curvelens")
             path, _ = QFileDialog.getOpenFileName(self, "Görsel veya PDF aç", settings.value("last_dir", ""),
                                                   f"Görsel ve PDF ({exts} *.pdf);;Tüm dosyalar (*)")
             if not path:
@@ -719,7 +719,7 @@ class MainWindow(QMainWindow):
             self.rs_check.setChecked(True)
             self._post_changed()
             self.statusBar().showMessage(f"Ortak X ızgarası için yeniden örnekleme etkinleştirildi (adım {step:g}).")
-        settings = QSettings("PlotDigitizer", "PlotDigitizer")
+        settings = QSettings("Curvelens", "Curvelens")
         start = settings.value("export_dir", "")
         if combined:
             base = Path(proj.source).stem or "egriler"

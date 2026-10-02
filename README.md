@@ -1,4 +1,4 @@
-# Plot Digitizer
+# Curvelens
 
 **PDF belgelerindeki ve grafik görsellerindeki eğrilerin sayısal değerlere dönüştürülmesi için bir yazılım aracı**
 
@@ -6,7 +6,7 @@
 
 Teknik belgelerde (ör. bileşen veri sayfaları) sunulan karakteristik eğriler çoğunlukla yalnızca grafik biçiminde
 yayımlanır; bu eğrilerin sayısal analizde, benzetimde ya da gömülü yazılımlarda kullanılabilmesi için tablo (lookup
-tablosu) biçimine dönüştürülmesi gerekir. Plot Digitizer, bu dönüşümü iki farklı veri kaynağı için gerçekleştirir:
+tablosu) biçimine dönüştürülmesi gerekir. Curvelens, bu dönüşümü iki farklı veri kaynağı için gerçekleştirir:
 (i) PDF sayfasına vektör olarak çizilmiş grafiklerde eğri değerleri, piksel ölçümüne başvurulmadan doğrudan PDF'in vektör
 geometrisinden elde edilir; (ii) PDF'e raster görüntü olarak gömülmüş grafiklerde ve bağımsız görsel dosyalarında (PNG,
 JPG, BMP, TIFF, WebP) değerler, kullanıcı tarafından yapılan eksen kalibrasyonu ve renk tabanlı eğri ayrıştırması ile
@@ -53,7 +53,8 @@ Görüntü olarak gömülmüş grafikler galeride "görsel grafik · kalibrasyon
    ilişkilendirilerek saklanır; bu sayede dosyanın taşınması ya da yeniden adlandırılması kaydı etkilemez, içeriği
    değişmiş bir dosya ise yeniden kalibrasyon gerektirir. Kayıt yalnızca kalibrasyonu (ve varsa elle tanımlanan grafik
    alanını) içerir; eğri adları ve elle düzeltmeler oturumla sınırlıdır. Kayıt dosyası
-   `%APPDATA%\PlotDigitizer\calibrations.json` konumundadır ve `PLOT_DIGITIZER_DATA` ortam değişkeniyle değiştirilebilir.
+   `%APPDATA%\Curvelens\calibrations.json` konumundadır ve `CURVELENS_DATA` ortam değişkeniyle değiştirilebilir
+   (program eskiden "Plot Digitizer" adını taşıyordu; eski `%APPDATA%\PlotDigitizer` klasörü varsa o kullanılmaya devam eder).
    Kalibrasyon **Yeniden kalibre et** ile güncellenir, `Araçlar → Bu grafiğin kayıtlı kalibrasyonunu sil` ile silinir.
    Vektör grafikler kalibrasyon gerektirmez.
 
@@ -134,6 +135,9 @@ ondalık ayırıcısı, başlıklı ya da başlıksız ve çok sütunlu tablolar
 
 ## 5. Kurulum, çalıştırma ve test
 
+**Kolay yol (Windows):** `run.bat` dosyasına çift tıklayın. İlk çalıştırmada gerekli kütüphaneler `.venv` içine otomatik
+indirilir (internet gerekir; Python 3.11+ yoksa `winget` ile kurulması denenir), sonraki çalıştırmalarda program doğrudan açılır.
+
 ```powershell
 py -m venv .venv
 .\.venv\Scripts\python -m pip install -r requirements.txt
@@ -143,7 +147,7 @@ py -m venv .venv
 .\.venv\Scripts\python app.py --selftest samples\INR18650P28A-V1-80093.pdf   # kütüphane/paket denetimi
 ```
 
-Tek dosyalık çalıştırılabilir: `python build_exe.py` → `dist\PlotDigitizer.exe` (ilk açılış birkaç saniye sürer).
+Tek dosyalık çalıştırılabilir: `python build_exe.py` → `dist\Curvelens.exe` (ilk açılış birkaç saniye sürer).
 `--screenshot out.png dosya.pdf --page gallery|detail --chart N --curve M` pencere görüntüsünü dosyaya kaydeder.
 
 ## 6. Yazılım mimarisi

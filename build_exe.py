@@ -1,4 +1,4 @@
-"""Build a single-file Windows executable:  ``python build_exe.py``  ->  ``dist/PlotDigitizer.exe``.
+"""Build a single-file Windows executable:  ``python build_exe.py``  ->  ``dist/Curvelens.exe``.
 
 Needs PyInstaller (``pip install pyinstaller``).  The .exe unpacks itself to a temporary folder
 on every start, so the first window takes a few seconds.
@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-NAME = "PlotDigitizer"
+NAME = "Curvelens"
 
 # Nothing the application uses lives in these; keeping them out shrinks the file.
 EXCLUDES = ["tkinter", "pytest", "IPython", "matplotlib", "PySide6.QtWebEngineCore", "PySide6.QtWebEngineWidgets",

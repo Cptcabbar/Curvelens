@@ -1,4 +1,4 @@
-"""Plot Digitizer entry point.
+"""Curvelens entry point.
 
     python app.py [file.pdf]                     PDF -> gallery of charts -> curves -> lookup table
     python app.py file.png                       chart picture (PNG/JPG/BMP...): calibrate + read its curves
@@ -74,7 +74,7 @@ def _screenshot(app, args, log) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv if argv is None else argv)
-    parser = argparse.ArgumentParser(prog="PlotDigitizer", add_help=True)
+    parser = argparse.ArgumentParser(prog="Curvelens", add_help=True)
     parser.add_argument("file", nargs="?", help="PDF or chart image (PNG, JPG, BMP, TIFF, WebP) to open")
     parser.add_argument("--manual", action="store_true", help="open the manual image digitiser instead")
     parser.add_argument("--selftest", action="store_true", help="headless check of the processing stack, then exit")
@@ -106,7 +106,7 @@ def main(argv: list[str] | None = None) -> int:
 
     app = QApplication([argv[0], *qt_args])
     app.setApplicationName(APP_NAME)
-    app.setOrganizationName("PlotDigitizer")
+    app.setOrganizationName("Curvelens")
     app.setStyle("Fusion")
     app.setWindowIcon(make_icon())
 

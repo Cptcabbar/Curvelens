@@ -109,11 +109,26 @@ def test_chart_key_uses_page_place_and_size():
 
 
 def test_data_dir_can_be_redirected_and_tests_do_not_use_the_real_one(monkeypatch, tmp_path):
-    assert "plotdigitizer-test-" in str(data_dir())                       # set by tests/conftest.py
-    monkeypatch.setenv("PLOT_DIGITIZER_DATA", str(tmp_path))
+    assert "curvelens-test-" in str(data_dir())                           # set by tests/conftest.py
+    monkeypatch.setenv("CURVELENS_DATA", str(tmp_path))
     assert data_dir() == tmp_path
+    monkeypatch.delenv("CURVELENS_DATA")
+    monkeypatch.setenv("PLOT_DIGITIZER_DATA", str(tmp_path / "old"))      # name used before the rename
+    assert data_dir() == tmp_path / "old"
     monkeypatch.delenv("PLOT_DIGITIZER_DATA")
-    assert data_dir().name == "PlotDigitizer"
+    monkeypatch.setenv("APPDATA", str(tmp_path))                          # Windows
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))                    # elsewhere
+    assert data_dir() == tmp_path / "Curvelens"
+
+
+def test_a_folder_saved_under_the_old_name_is_still_used(monkeypatch, tmp_path):
+    monkeypatch.delenv("CURVELENS_DATA")
+    monkeypatch.setenv("APPDATA", str(tmp_path))
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
+    (tmp_path / "PlotDigitizer").mkdir()
+    assert data_dir() == tmp_path / "PlotDigitizer"
+    (tmp_path / "Curvelens").mkdir()                                      # once the new folder exists it wins
+    assert data_dir() == tmp_path / "Curvelens"
 
 
 def test_a_hand_drawn_plot_area_is_remembered_too(tmp_path):

@@ -42,7 +42,7 @@ def _unc_text(lo: float, hi: float, unit: str) -> str:
 
 def _header(curves: Sequence[CurveData], x_axis: AxisInfo, y_axis: AxisInfo, source: str,
             step: float | None, smoothing: str | None, pixel_error: float) -> list[str]:
-    lines = ["Plot Digitizer export"]
+    lines = ["Curvelens export"]
     if source:
         lines.append(f"source: {source}")
     lines.append(f"x axis: {x_axis.full_label or 'x'} [{'log10' if x_axis.log else 'linear'}]")

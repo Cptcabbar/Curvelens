@@ -5,4 +5,4 @@ import tempfile
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 # Remembered calibrations go to a throw-away folder: tests must never touch the user's real data.
-os.environ["PLOT_DIGITIZER_DATA"] = tempfile.mkdtemp(prefix="plotdigitizer-test-")
+os.environ["CURVELENS_DATA"] = tempfile.mkdtemp(prefix="curvelens-test-")

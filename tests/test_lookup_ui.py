@@ -276,4 +276,4 @@ def test_drop_of_a_pdf_file_opens_it(win, app):
 
 def test_manual_tool_is_still_reachable_from_the_menu(win):
     win.act_manual.trigger()
-    assert len(win._legacy) == 1 and win._legacy[0].windowTitle().startswith("Plot Digitizer")
+    assert len(win._legacy) == 1 and win._legacy[0].windowTitle().startswith("Curvelens")

@@ -5,9 +5,10 @@ PDF *content* (a hash of the file, so a copy or a renamed file is still recognis
 picture's place on the page).  Everything else - the curves - is read again from the picture when the chart is
 opened, which takes a moment and cannot go stale.
 
-The store is one small JSON file in the user's application-data folder (``%APPDATA%\\PlotDigitizer`` on Windows,
-overridable with the ``PLOT_DIGITIZER_DATA`` environment variable).  A damaged file is set aside and never stops the
-application.
+The store is one small JSON file in the user's application-data folder (``%APPDATA%\\Curvelens`` on Windows,
+overridable with the ``CURVELENS_DATA`` environment variable).  The application used to be called Plot Digitizer:
+an existing ``PlotDigitizer`` folder (and the ``PLOT_DIGITIZER_DATA`` variable) is still honoured, so calibrations
+saved under the old name are not lost.  A damaged file is set aside and never stops the application.
 """
 from __future__ import annotations
 
@@ -27,14 +28,15 @@ MAX_PDFS = 300                   # oldest entries are dropped beyond this
 
 
 def data_dir() -> Path:
-    override = os.environ.get("PLOT_DIGITIZER_DATA")
+    override = os.environ.get("CURVELENS_DATA") or os.environ.get("PLOT_DIGITIZER_DATA")
     if override:
         return Path(override)
     if sys.platform == "win32":
         base = os.environ.get("APPDATA") or str(Path.home() / "AppData" / "Roaming")
     else:
         base = os.environ.get("XDG_DATA_HOME") or str(Path.home() / ".local" / "share")
-    return Path(base) / "PlotDigitizer"
+    current, legacy = Path(base) / "Curvelens", Path(base) / "PlotDigitizer"
+    return legacy if legacy.is_dir() and not current.exists() else current
 
 
 def pdf_fingerprint(path: str | Path) -> str:

@@ -9,4 +9,4 @@ pypdfium2>=4.30               # PDF rasterisation + text/vector-layer access (Ap
 # Development / packaging
 pytest>=8.0
 matplotlib>=3.8               # tests only: makes vector PDFs with a known answer
-pyinstaller>=6.0              # python build_exe.py -> dist/PlotDigitizer.exe
+pyinstaller>=6.0              # python build_exe.py -> dist/Curvelens.exe
